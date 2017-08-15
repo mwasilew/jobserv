@@ -22,5 +22,9 @@ def create_app(settings_object='jobserv.settings'):
     db.init_app(app)
     Migrate(app, db)
 
+    from jobserv.storage import Storage
+    if Storage.blueprint:
+        app.register_blueprint(Storage.blueprint)
+
     app.json_encoder = ISO8601_JSONEncoder
     return app
