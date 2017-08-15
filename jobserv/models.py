@@ -341,7 +341,7 @@ class Run(db.Model, StatusMixin):
             data['status_events'] = [{'time': x.time, 'status': x.status.name}
                                      for x in self.status_events]
             data['tests'] = url_for(
-                'api.test_list', proj=p.name, build_id=b.build_id,
+                'api_test.test_list', proj=p.name, build_id=b.build_id,
                 run=self.name, _external=True)
         return data
 
@@ -404,7 +404,7 @@ class Test(db.Model, StatusMixin):
         r = self.run
         b = r.build
         p = b.project
-        url = url_for('api.test_get', proj=p.name, build_id=b.build_id,
+        url = url_for('api_test.test_get', proj=p.name, build_id=b.build_id,
                       run=self.run.name, test=self.name, _external=True)
         data = {
             'name': self.name,
