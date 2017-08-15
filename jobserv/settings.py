@@ -19,6 +19,10 @@ RUN_URL_FMT = os.environ.get('RUN_URL_FMT')
 # BUILD_URL_FMT = 'https://example.com/{project}/{build}
 # RUN_URL_FMT = 'https://example.com/{project}/{build}/{run}
 
+SMTP_SERVER = os.environ.get('SMTP_SERVER', 'smtp.gmail.com')
+SMTP_USER = os.environ.get('SMTP_USER')
+SMTP_PASSWORD = os.environ.get('SMTP_PASSWORD')
+
 CARBON_HOST = os.environ.get('CARBON_HOST')
 if CARBON_HOST:
     parts = CARBON_HOST.split(':')
