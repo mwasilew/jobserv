@@ -13,7 +13,7 @@ from flask_sqlalchemy import SQLAlchemy
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.hybrid import Comparator, hybrid_property
 
-from jobserv import settings
+from jobserv.settings import WORKER_DIR
 from jobserv.stats import CarbonClient
 
 db = SQLAlchemy()
@@ -499,7 +499,7 @@ class Worker(db.Model):
         return '<Worker %s - %s/%s>' % (self.name, self.online, self.enlisted)
 
     def as_json(self, detailed=False):
-        url = url_for('api.worker_get', name=self.name, _external=True)
+        url = url_for('api_worker.worker_get', name=self.name, _external=True)
         return {
             'name': self.name,
             'url': url,
@@ -515,8 +515,7 @@ class Worker(db.Model):
 
     @property
     def pings_log(self):
-        return os.path.join(
-            settings.NFS_DIR, 'workers', self.name, 'pings.log')
+        return os.path.join(WORKER_DIR, self.name, 'pings.log')
 
     def ping(self, **kwargs):
         if not self.online:

@@ -1,4 +1,5 @@
 import os
+import hashlib
 
 DEBUG = 1
 
@@ -36,3 +37,18 @@ if CARBON_HOST:
 CARBON_PREFIX = os.environ.get('CARBON_PREFIX', 'jobserv')
 if CARBON_PREFIX and CARBON_PREFIX[-1] != '.':
     CARBON_PREFIX += '.'
+
+RUNNER = os.path.join(os.path.dirname(__file__),
+                      '../runner/dist/jobserv_runner-0.1-py3-none-any.whl')
+
+SIMULATOR_SCRIPT = os.path.join(os.path.dirname(__file__), '../simulator.py')
+with open(SIMULATOR_SCRIPT, 'rb') as f:
+    h = hashlib.md5()
+    h.update(f.read())
+    SIMULATOR_SCRIPT_VERSION = h.hexdigest()
+
+WORKER_SCRIPT = os.path.join(os.path.dirname(__file__), '../jobserv_worker.py')
+with open(WORKER_SCRIPT, 'rb') as f:
+    h = hashlib.md5()
+    h.update(f.read())
+    WORKER_SCRIPT_VERSION = h.hexdigest()

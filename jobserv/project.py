@@ -92,7 +92,8 @@ class ProjectDefinition(object):
             'api_key': dbrun.api_key,
             'run_url': url,
             'frontend_url': public,
-            'runner_url': url_for('api.runner_download', _external=True),
+            'runner_url': url_for(
+                'api_worker.runner_download', _external=True),
             'trigger_type': trigger_type,
             'container': run['container'],
             'privileged': run.get('privileged', False),

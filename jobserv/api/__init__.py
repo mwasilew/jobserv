@@ -4,10 +4,12 @@ from jobserv.api.project_triggers import blueprint as project_triggers_bp
 from jobserv.api.run import blueprint as run_bp
 from jobserv.api.test import blueprint as test_bp
 from jobserv.api.test_query import blueprint as test_query_bp
+from jobserv.api.worker import blueprint as worker_bp
 from jobserv.jsend import ApiError
 
 BLUEPRINTS = (
-    project_bp, project_triggers_bp, build_bp, run_bp, test_bp, test_query_bp
+    project_bp, project_triggers_bp, build_bp, run_bp, test_bp, test_query_bp,
+    worker_bp
 )
 
 
