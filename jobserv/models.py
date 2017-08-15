@@ -55,7 +55,8 @@ class Project(db.Model):
     def as_json(self, detailed=False):
         data = {
             'name': self.name,
-            'url': url_for('api.project_get', proj=self.name, _external=True),
+            'url': url_for(
+                'api_project.project_get', proj=self.name, _external=True),
         }
         if detailed:
             data['builds_url'] = url_for(

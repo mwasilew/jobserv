@@ -22,6 +22,9 @@ def create_app(settings_object='jobserv.settings'):
     db.init_app(app)
     Migrate(app, db)
 
+    import jobserv.api
+    jobserv.api.register_blueprints(app)
+
     from jobserv.storage import Storage
     if Storage.blueprint:
         app.register_blueprint(Storage.blueprint)
