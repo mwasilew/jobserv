@@ -1,14 +1,9 @@
 from flask import Blueprint
 
-from jobserv.jsend import ApiError, get_or_404, jsendify, paginate
+from jobserv.jsend import get_or_404, jsendify, paginate
 from jobserv.models import Project
 
 blueprint = Blueprint('api_project', __name__, url_prefix='/projects')
-
-
-@blueprint.errorhandler(ApiError)
-def api_error(e):
-    return e.resp
 
 
 @blueprint.route('/', methods=('GET',))
