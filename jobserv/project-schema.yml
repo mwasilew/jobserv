@@ -1,0 +1,189 @@
+## builds a schema to validate job definitions of this form:
+#
+# timeout: 5  # time in minutes to let build run before failing
+# triggers:
+#   - name: github
+#     type: github_pr
+#     runs:
+#       - name: unit-test
+#         container: ubuntu
+#         script: unit-test
+#         params:
+#           PLATFORM: aarch64
+#     email:  # optional
+#       users: foo@com, bar@com
+#       only_failures: True   # defaults to False
+# params:
+#  GH_PRNUM: PRNUM_SET_BY_TRIGGER
+#  GH_OWNER: linaro-technologies
+#  GH_REPO: ltd-ci-jobserv
+#
+# script:
+#   unit-test: |
+#     #!/bin/sh -ex
+#     echo $GH_PRUNM
+#     echo param PLATFORM=${PLATFORM}
+#     # the github-pr runner downloads the code and runs us in the directory:
+#     make all
+##
+
+type: map
+mapping:
+  description:
+    type: str
+  timeout:
+    type: int
+    required: True
+  triggers:
+    type: seq
+    sequence:
+      - type: map
+        mapping:
+          name:
+            type: str
+            required: True
+          type:
+            type: str
+            required: True
+          params:
+            type: map
+            mapping:
+              regex;(.*):
+                type: str
+          runs:
+            required: True
+            type: seq
+            sequence:
+              - type: map
+                mapping:
+                  name:
+                    type: str
+                    required: True
+                  loop-on:
+                    required: False
+                    type: seq
+                    sequence:
+                      - type: map
+                        mapping:
+                          param:
+                            type: str
+                            required: True
+                          values:
+                            required: True
+                            type: seq
+                            sequence:
+                              - type: str
+                  container:
+                    type: str
+                    required: True
+                  privileged:
+                    type: bool
+                    required: false
+                  host-tag:
+                    type: str
+                    required: False
+                  # either script or script-repo is required, but pykwalify
+                  # doesn't have a nice way to express this, so its additional
+                  # validation we do in project.py
+                  script:
+                    type: str
+                    required: False
+                  script-repo:
+                    type: map
+                    required: False
+                    mapping:
+                      name:
+                        type: str
+                        required: True
+                      path:
+                        type: str
+                        required: True
+                  persistent-volumes:
+                    required: False
+                    type: map
+                    mapping:
+                      regex;(^[a-zA-Z0-9_\.\-]+$):
+                        type: str
+                  params:
+                    required: False
+                    type: map
+                    mapping:
+                      regex;(.*):
+                        type: str
+                  test-grepping:
+                    required: False
+                    type: map
+                    mapping:
+                      test-pattern:
+                        type: str
+                        required: False
+                      result-pattern:
+                        type: str
+                        required: True
+                      fixupdict:
+                        required: False
+                        type: map
+                        mapping:
+                          regex;(.*):
+                            type: str
+                  triggers:  # allow completion of a run to trigger something
+                    required: False
+                    type: seq
+                    sequence:
+                      - type: map
+                        mapping:
+                          name:
+                            type: str
+                            required: True
+                          run-names:
+                            type: str
+                            required: False
+          triggers: # allow completion of a build to trigger something
+            required: False
+            type: seq
+            sequence:
+              - type: map
+                mapping:
+                  name:
+                    type: str
+                    required: True
+                  run-names:
+                    type: str
+                    required: False
+          email:
+            required: False
+            type: map
+            mapping:
+              users:
+                type: str
+                required: True
+              only_failures:
+                type: bool
+                required: False
+  params:
+    type: map
+    mapping:
+      regex;(.*):
+        type: str
+  scripts:
+    type: map
+    required: False
+    mapping:
+      regex;(.*):
+        type: str
+  script-repos:
+    type: map
+    required: False
+    mapping:
+      regex;(.*):
+        type: map
+        mapping:
+          clone-url:
+            type: str
+            required: True
+          git-ref:
+            type: str
+            required: False
+          token:
+            type: str
+            required: False

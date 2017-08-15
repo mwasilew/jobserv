@@ -1,0 +1,35 @@
+# This is the same as the python-github.yml, but shows how "script-repos" can
+# be used.
+timeout: 5
+triggers:
+  - name: github
+    type: github_pr
+    runs:
+      - name: unit-test
+        container: linarotechnologies/python-builder
+        host-tag: amd64
+        script-repo:
+          name: tools-repo
+          path: unit-test.sh
+      - name: flake8
+        container: linarotechnologies/python-builder
+        host-tag: amd64
+        script-repo:
+          name: tools-repo
+          path: flake8.sh
+    email:
+      # this tells the JobServ to send an email when a build completes (ie
+      # all the runs)
+      users: 'andy.doan@linaro.org, tyler.baker@linaro.org'
+      only_failures: True
+
+script-repos:
+  # the tools repo needs to be a clone-able URL. Inside that repo, the scripts
+  # unit-test.sh and flake8.sh would have to live in the top directory.
+  tools-repo:
+    clone-url: https://github.com/foo.git
+    # token: optional, but if you need to use a personal access to token to
+    #        access the repo. This would be the name of the "secret" that you
+    #        pass the token into the build with.
+    # git-ref: optional, but you can checkout the code at a specific SHA. This
+    #          field could be a SHA, a tag, a branch, etc.

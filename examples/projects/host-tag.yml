@@ -1,0 +1,26 @@
+timeout: 5
+triggers:
+  - name: git
+    type: git_poller
+    runs:
+      - name: simple-for-aarch64-host
+        container: linarotechnologies/genesis-sdk
+        # host-tag is case-insensitive and can use matching with * and ?
+        host-tag: Aarch6*
+        script: compile
+
+      # this one uses loop-on to do the same run on different hosts
+      - name: compile-{loop}
+        container: linarotechnologies/genesis-sdk
+        script: compile
+        loop-on:
+          - param: host-tag
+            values: [aarch64, ArmHf]
+
+scripts:
+  compile: |
+    #!/bin/sh -ex
+    . zephyr-env.sh
+    cd $APP
+    make
+    cp outdir/$BOARD/zephyr.* /archive

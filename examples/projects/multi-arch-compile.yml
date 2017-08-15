@@ -1,0 +1,52 @@
+# An example project based on polling a git repo for changes and compiling for
+# multiple architectures. The 96b_nitrogen compile could be tested in the
+# simulator with:
+#   ./simulator.py create \
+#     -d ./examples/projects/multi-arch-compile.yml \
+#     -t git \
+#     -r compile-96b_nitrogen \
+#     -w /tmp/zephyr \
+#     -p BOARD=96b_nitrogen \
+#     -p GIT_SHA=08a2c6019ce873
+timeout: 5
+triggers:
+  - name: git
+    type: git_poller
+    params:
+      GIT_URL: https://github.com/zephyrproject-rtos/zephyr.git
+      GIT_POLL_REFS: "refs/heads/master, refs/heads/v1.7*"
+    runs:
+      # the {loop} in conjunction with the "loop-on" directive below will
+      # cause two runs to be created:
+      #   compile-frdm_k64f and compile-96b_nitrogen
+      - name: compile-{loop}
+        container: linarotechnologies/genesis-sdk
+        host-tag: amd64
+        script: compile
+        loop-on:
+          - param: BOARD
+            values: [frdm_k64f, 96b_nitrogen]
+        triggers:
+          # each successful run will trigger another run named. For the
+          # 96b_nitrogen loop, this run would be called fake-test-96b_nitrogen
+          - name: test
+            run-names: "{name}-{loop}"
+
+  - name: test
+    type: simple
+    runs:
+      - name: fake-test
+        host-tag: amd64
+        container: linarotechnologies/python-builder
+        script: test
+
+scripts:
+  compile: |
+    #!/bin/bash -ex
+    . zephyr-env.sh
+    make -C samples/hello_world
+    cp samples/hello_world/outdir/$BOARD/zephyr.bin /archive/
+
+  test: |
+    #!/bin/sh -ex
+    env | sort

@@ -1,0 +1,39 @@
+# An example to test a Python based project triggered by GitHub Pull Requests
+# This can be tested under the simulator with:
+#   ./simulator.py create \
+#       -d ./examples/projects/python-github.yml \
+#       -t github \
+#       -r flake8 \
+#       -w /tmp/python-github-simulator \
+#       -p GH_OWNER=linaro-technologies-dev \
+#       -p GH_REPO=ltd-ci-jobserv \
+#       -p GH_PRNUM=35 \
+#       -s githubtok=<your github personal access token>
+timeout: 5
+triggers:
+  - name: github
+    type: github_pr
+    runs:
+      - name: unit-test
+        container: linarotechnologies/python-builder
+        host-tag: amd64
+        script: unit-test
+      - name: flake8
+        container: linarotechnologies/python-builder
+        host-tag: amd64
+        script: flake8
+    email:
+      # this tells the JobServ to send an email when a build completes (ie
+      # all the runs)
+      users: 'andy.doan@linaro.org, tyler.baker@linaro.org'
+      only_failures: True
+
+scripts:
+  flake8: |
+    #!/bin/sh -ex
+    pip3 install flake8
+    flake8 --exclude=migrations/ ./
+
+  unit-test: |
+    #!/bin/sh -ex
+    ./unit-test.sh

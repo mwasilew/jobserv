@@ -1,0 +1,20 @@
+timeout: 5
+triggers:
+  - name: git
+    type: git_poller
+    runs:
+      - name: simple-for-aarch64-host
+        container: jpetazzo/dind
+        host-tag: amd64
+        # Run the docker container with --privileged
+        privileged: true
+        script: compile
+
+scripts:
+  compile: |
+    #!/bin/sh -ex
+    mkdir /foo
+    cd /foo
+    echo FROM alpine > Dockerfile
+    echo RUN apk add --update curl >> Dockerfile
+    /usr/local/bin/wrapdocker docker build ./
