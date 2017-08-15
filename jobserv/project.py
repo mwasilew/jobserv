@@ -78,7 +78,7 @@ class ProjectDefinition(object):
                 return trigger
 
     def get_run_definition(self, dbrun, run, trigger_type, params, secrets):
-        url = url_for('api.run_update', proj=dbrun.build.project.name,
+        url = url_for('api_run.run_update', proj=dbrun.build.project.name,
                       build_id=dbrun.build.build_id, run=dbrun.name,
                       _external=True)
         public = url

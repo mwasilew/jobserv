@@ -195,8 +195,9 @@ class Build(db.Model, StatusMixin):
         if detailed:
             data['status_events'] = [{'time': x.time, 'status': x.status.name}
                                      for x in self.status_events]
-            data['runs_url'] = url_for('api.run_list', proj=self.project.name,
-                                       build_id=self.build_id, _external=True)
+            data['runs_url'] = url_for(
+                'api_run.run_list', proj=self.project.name,
+                build_id=self.build_id, _external=True)
             data['reason'] = self.reason
             data['annotation'] = self.annotation
         return data
@@ -319,10 +320,11 @@ class Run(db.Model, StatusMixin):
     def as_json(self, detailed=False):
         b = self.build
         p = b.project
-        url = url_for('api.run_get', proj=p.name, build_id=b.build_id,
+        url = url_for('api_run.run_get', proj=p.name, build_id=b.build_id,
                       run=self.name, _external=True)
-        log = url_for('api.run_get_artifact', proj=p.name, build_id=b.build_id,
-                      run=self.name, path='console.log', _external=True)
+        log = url_for('api_run.run_get_artifact', proj=p.name,
+                      build_id=b.build_id, run=self.name, path='console.log',
+                      _external=True)
         data = {
             'name': self.name,
             'url': url,

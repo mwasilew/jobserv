@@ -50,7 +50,7 @@ def _fail_unexpected(build, exception):
         url = BUILD_URL_FMT.format(
             project=build.project.name, build=build.build_id)
     else:
-        url = url_for('api.run_get_artifact', proj=build.project.name,
+        url = url_for('api_run.run_get_artifact', proj=build.project.name,
                       build_id=build.build_id, run=r.name, path='console.log')
 
     exception = ApiError(500, str(exception))
