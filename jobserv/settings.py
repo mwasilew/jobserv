@@ -12,6 +12,13 @@ STORAGE_BACKEND = os.environ.get(
 
 INTERNAL_API_KEY = os.environ.get('INTERNAL_API_KEY', '').encode()
 
+# Allow this to be deployed in a way that builds and runs can provide links
+# to a custom web frontend
+BUILD_URL_FMT = os.environ.get('BUILD_URL_FMT')
+RUN_URL_FMT = os.environ.get('RUN_URL_FMT')
+# BUILD_URL_FMT = 'https://example.com/{project}/{build}
+# RUN_URL_FMT = 'https://example.com/{project}/{build}/{run}
+
 CARBON_HOST = os.environ.get('CARBON_HOST')
 if CARBON_HOST:
     parts = CARBON_HOST.split(':')

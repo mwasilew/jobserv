@@ -60,7 +60,7 @@ class Project(db.Model):
         }
         if detailed:
             data['builds_url'] = url_for(
-                'api.build_list', proj=self.name, _external=True)
+                'api_build.build_list', proj=self.name, _external=True)
         return data
 
     def __repr__(self):
@@ -178,7 +178,7 @@ class Build(db.Model, StatusMixin):
         self.status = BuildStatus.QUEUED
 
     def as_json(self, detailed=False):
-        url = url_for('api.build_get', proj=self.project.name,
+        url = url_for('api_build.build_get', proj=self.project.name,
                       build_id=self.build_id, _external=True)
         data = {
             'build_id': self.build_id,
