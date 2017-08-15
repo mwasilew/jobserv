@@ -2,6 +2,8 @@ import os
 
 DEBUG = 1
 
+WORKER_DIR = os.environ.get('WORKER_DIR', '/data/workers')
+
 CARBON_HOST = os.environ.get('CARBON_HOST')
 if CARBON_HOST:
     parts = CARBON_HOST.split(':')
