@@ -6,7 +6,7 @@ from jobserv.flask import create_app
 from jobserv.git_poller import run
 from jobserv.lava_reactor import run_reaper
 from jobserv.models import (
-    Project, ProjectTrigger, TriggerTypes, db)
+    Project, ProjectTrigger, TriggerTypes, Worker, db)
 from jobserv.worker import run_monitor_workers
 
 app = create_app()
@@ -73,4 +73,24 @@ def project_add_trigger(project, user, type, secrets=None,
         return
     db.session.add(ProjectTrigger(
         user, type, p, definition_repo, definition_file, secret_map))
+    db.session.commit()
+
+
+@app.cli.group()
+def worker():
+    pass
+
+
+@worker.command('list')
+def worker_list():
+    print('Worker\tEnlisted\tOnline')
+    for w in Worker.query.all():
+        print('%s\t%s\t%s' % (w.name, w.enlisted, w.online))
+
+
+@worker.command('enlist')
+@click.argument('name')
+def worker_enlist(name):
+    w = Worker.query.filter(Worker.name == name).one()
+    w.enlisted = True
     db.session.commit()
