@@ -1,3 +1,6 @@
+# Copyright (C) 2017 Linaro Limited
+# Author: Andy Doan <andy.doan@linaro.org>
+
 from flask import Blueprint
 
 from jobserv.jsend import get_or_404, jsendify, paginate

@@ -1,3 +1,6 @@
+# Copyright (C) 2017 Linaro Limited
+# Author: Andy Doan <andy.doan@linaro.org>
+
 from flask import Blueprint, request
 
 from jobserv.api.run import _authenticate_runner, _get_run, _handle_triggers

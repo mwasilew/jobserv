@@ -1,3 +1,6 @@
+# Copyright (C) 2017 Linaro Limited
+# Author: Andy Doan <andy.doan@linaro.org>
+
 from flask import Blueprint, request
 
 from jobserv.internal_requests import internal_api

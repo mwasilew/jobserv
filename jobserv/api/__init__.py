@@ -1,3 +1,6 @@
+# Copyright (C) 2017 Linaro Limited
+# Author: Andy Doan <andy.doan@linaro.org>
+
 from jobserv.api.build import blueprint as build_bp
 from jobserv.api.github import blueprint as github_bp
 from jobserv.api.gitlab import blueprint as gitlab_bp

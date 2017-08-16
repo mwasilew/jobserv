@@ -1,4 +1,6 @@
 #!/usr/bin/env python3
+# Copyright (C) 2017 Linaro Limited
+# Author: Andy Doan <andy.doan@linaro.org>
 
 import argparse
 import hashlib

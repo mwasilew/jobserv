@@ -1,3 +1,6 @@
+# Copyright (C) 2017 Linaro Limited
+# Author: Andy Doan <andy.doan@linaro.org>
+
 from jobserv.models import Project, ProjectTrigger, db
 from tests import JobServTest
 

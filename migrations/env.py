@@ -1,3 +1,6 @@
+# Copyright (C) 2017 Linaro Limited
+# Author: Andy Doan <andy.doan@linaro.org>
+
 from __future__ import with_statement
 from alembic import context
 from sqlalchemy import engine_from_config, pool

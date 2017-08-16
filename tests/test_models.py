@@ -1,3 +1,6 @@
+# Copyright (C) 2017 Linaro Limited
+# Author: Andy Doan <andy.doan@linaro.org>
+
 import unittest.mock
 from sqlalchemy.exc import IntegrityError
 
