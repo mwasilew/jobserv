@@ -3,6 +3,15 @@ import hashlib
 
 DEBUG = 1
 
+SQLALCHEMY_TRACK_MODIFICATIONS = False
+_fmt = os.environ.get('SQLALCHEMY_DATABASE_URI_FMT')
+if _fmt:
+    SQLALCHEMY_DATABASE_URI = _fmt.format(
+        db_user=os.environ['DB_USER'], db_pass=os.environ['DB_PASS'])
+else:
+    SQLALCHEMY_DATABASE_URI = 'sqlite:////tmp/test.db'
+
+
 JOBS_DIR = os.environ.get('JOBS_DIR', '/data/ci_jobs')
 WORKER_DIR = os.environ.get('WORKER_DIR', '/data/workers')
 

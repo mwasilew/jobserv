@@ -1,0 +1,74 @@
+version: '3'
+
+volumes:
+  mysql_data:
+  artifacts:
+
+services:
+  db:
+    image: mysql
+    environment:
+      MYSQL_DATABASE: jobserv
+      MYSQL_USER: jobserv
+      MYSQL_PASSWORD: jobservpass
+      MYSQL_RANDOM_ROOT_PASSWORD: "yes"
+    volumes:
+      - mysql_data:/var/lib/mysql
+
+  api:
+    image: jobserv
+    ports:
+      - 8000
+    deploy:
+      replicas: 2
+    environment:
+      SQLALCHEMY_DATABASE_URI_FMT: "mysql+pymysql://{db_user}:{db_pass}@db/jobserv"
+      DB_USER: jobserv
+      DB_PASS: jobservpass
+      FLASK_DEBUG: 1
+      STORAGE_BACKEND: jobserv.storage.local_storage
+      INTERNAL_API_KEY: ThisIsNotSecure
+    volumes:
+      - artifacts:/data
+
+  lci-web:
+    image: dockercloud/haproxy
+    ports:
+      - 80:80
+    links:
+      - api
+    depends_on:
+      - db
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+
+  worker-monitor:
+    image: jobserv
+    command: "flask monitor_workers"
+    environment:
+      SQLALCHEMY_DATABASE_URI_FMT: "mysql+pymysql://{db_user}:{db_pass}@db/jobserv"
+      DB_USER: jobserv
+      DB_PASS: jobservpass
+    depends_on:
+      - db
+
+  git-poller:
+    image: jobserv
+    command: "flask run_git_poller"
+    environment:
+      INTERNAL_API_KEY: ThisIsNotSecure
+      STORAGE_BACKEND: jobserv.storage.local_storage
+    depends_on:
+      - lci-web
+      - api
+    volumes:
+      - artifacts:/data
+
+  lava-reaper:
+    image: jobserv
+    command: "flask run_lava_reaper"
+    environment:
+      INTERNAL_API_KEY: ThisIsNotSecure
+    depends_on:
+      - lci-web
+      - api
