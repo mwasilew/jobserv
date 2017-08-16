@@ -24,6 +24,9 @@ SMTP_SERVER = os.environ.get('SMTP_SERVER', 'smtp.gmail.com')
 SMTP_USER = os.environ.get('SMTP_USER')
 SMTP_PASSWORD = os.environ.get('SMTP_PASSWORD')
 
+LAVA_URLBASE = os.environ.get(
+    'LAVA_URLBASE', 'http://lava.linarotechnologies.org')
+
 CARBON_HOST = os.environ.get('CARBON_HOST')
 if CARBON_HOST:
     parts = CARBON_HOST.split(':')
