@@ -3,6 +3,7 @@ import json
 import click
 
 from jobserv.flask import create_app
+from jobserv.git_poller import run
 from jobserv.lava_reactor import run_reaper
 from jobserv.models import (
     Project, ProjectTrigger, TriggerTypes, db)
@@ -14,6 +15,11 @@ app = create_app()
 @app.cli.command()
 def run_lava_reaper():
     run_reaper()
+
+
+@app.cli.command()
+def run_git_poller():
+    run()
 
 
 @app.cli.command()

@@ -27,6 +27,9 @@ SMTP_PASSWORD = os.environ.get('SMTP_PASSWORD')
 LAVA_URLBASE = os.environ.get(
     'LAVA_URLBASE', 'http://lava.linarotechnologies.org')
 
+# every 90 seconds
+GIT_POLLER_INTERVAL = int(os.environ.get('GIT_POLLER_INTERVAL', '90'))
+
 CARBON_HOST = os.environ.get('CARBON_HOST')
 if CARBON_HOST:
     parts = CARBON_HOST.split(':')
