@@ -1,4 +1,5 @@
 from jobserv.api.build import blueprint as build_bp
+from jobserv.api.health import blueprint as health_bp
 from jobserv.api.project import blueprint as project_bp
 from jobserv.api.project_triggers import blueprint as project_triggers_bp
 from jobserv.api.run import blueprint as run_bp
@@ -9,7 +10,7 @@ from jobserv.jsend import ApiError
 
 BLUEPRINTS = (
     project_bp, project_triggers_bp, build_bp, run_bp, test_bp, test_query_bp,
-    worker_bp
+    worker_bp, health_bp,
 )
 
 
