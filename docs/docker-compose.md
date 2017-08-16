@@ -73,9 +73,8 @@ project could be:
     flask project add-trigger \
       -u doanac \
       -t git_poller \
-      -s githubtok=<YOUR GITHUB TOKEN> \
-      -r https://github.com/linaro-technologies-dev/ltd-jobserv-project-defs \
-      -f mcuboot-upstream.yml \
+      -r https://github.com/linaro-technologies/jobserv \
+      -f .jobserv.yml \
       home-poller
 ~~~
 
