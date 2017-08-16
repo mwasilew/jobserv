@@ -98,7 +98,7 @@ re-creating the run locally. eg:
       wget -O runner https://api.linarotechnologies.org/runner
       wget -O rundef.json https://jobserv.example.com/projects/Foo/builds/1/runs/compile-linux/.rundef.json
       # open rundef.json and update values for secrets
-      PYTHONPATH=./runner python3 -m lci_runner.simulator -w `pwd` rundef.json
+      PYTHONPATH=./runner python3 -m jobserv_runner.simulator -w `pwd` rundef.json
 ~~~
 
 There's also a built-in [simulator](/docs/tutorial.md) to help develop new
@@ -180,7 +180,7 @@ This service is deployed into Kubernetes as follows:
                          /          |            \
           +-------------v-+  +------v--------+  +-v-------------+
           |               |  |               |  |               |
-          |  lci-jobserv  |  |  lci-jobserv  |  |  lci-jobserv  |
+          |  jobserv api  |  |  jobserv api  |  |  jobserv api  |
           |               |  |               |  |               |
           +---------------+  +---------------+  +---------------+
 
