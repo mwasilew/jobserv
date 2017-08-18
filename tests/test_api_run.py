@@ -12,7 +12,8 @@ from unittest.mock import Mock, patch
 import jobserv.storage.base
 
 from jobserv.storage import Storage
-from jobserv.models import Build, BuildStatus, Project, Run, Test, TestResult, db
+from jobserv.models import (
+    Build, BuildStatus, Project, Run, Test, TestResult, db)
 
 from tests import JobServTest
 

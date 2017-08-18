@@ -212,7 +212,8 @@ class SimpleHandler(object):
     wget -O runner {runner}
     wget -O rundef.json {run}.rundef.json
     # open rundef.json and update values for secrets
-    PYTHONPATH=./runner python3 -m jobserv_runner.simulator -w `pwd` rundef.json
+    PYTHONPATH=./runner \
+        python3 -m jobserv_runner.simulator -w `pwd` rundef.json
 
 '''.format(run=self.rundef['run_url'], runner=self.rundef['runner_url'])
             log._write(msg)
