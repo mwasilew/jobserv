@@ -1,4 +1,4 @@
-# JobServ Architecture
+# JobServ
 
 The JobServ component can be thought of at a high level as something similar to
 Jenkins. However, several design decisions have been made to make sure the
@@ -47,6 +47,9 @@ these items:
 
  * **Server** - The primary things are Python3, Flask, and SQLAlchemy.
  * **Worker** - Python3, python3-requests, Docker
+
+The JobServ can be tested out for evaluation and development purposes in a
+few minutes by user [docker-compose](docs/docker-compose.md).
 
 ## Project
 
