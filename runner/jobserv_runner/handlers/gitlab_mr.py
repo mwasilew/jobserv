@@ -40,13 +40,6 @@ class StatusApi(JobServApi):
 
 
 class GitLab(GitPoller):
-    def _get_http_clone_token(self):
-        user = self.rundef.get('secrets', {}).get('gitlabuser')
-        if not user:
-            user = self.rundef['env']['gitlabuser']
-        token = self.rundef['secrets']['gitlabtok']
-        return user + ':' + token
-
     @classmethod
     def get_jobserv(clazz, rundef):
         if rundef.get('simulator'):

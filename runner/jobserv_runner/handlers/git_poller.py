@@ -8,14 +8,26 @@ from jobserv_runner.handlers.simple import HandlerError, SimpleHandler
 
 
 class GitPoller(SimpleHandler):
-    def _get_http_clone_token(self):
-        return None
+    def _get_http_clone_token(self, clone_url):
+        secrets = self.rundef.get('secrets', {})
+        if clone_url.startswith('https://github.com'):
+            tok = secrets.get('githubtok')
+            if tok:
+                return tok
+
+        # we can't determine by URL if its a gitlab repo, so just assume
+        # the rundef/secrets are done sanely by the user
+        env = self.rundef['env']
+        user = env.get('gitlabuser') or secrets.get('gitlabuser')
+        if user:
+            token = self.rundef['secrets']['gitlabtok']
+            return user + ':' + token
 
     def _clone(self, log, dst):
         clone_url = self.rundef['env']['GIT_URL']
         log.info('Clone_url: %s', clone_url)
 
-        token = self._get_http_clone_token()
+        token = self._get_http_clone_token(clone_url)
         if token:
             log.info('Using an HTTP token for cloning')
             p = urllib.parse.urlsplit(clone_url)

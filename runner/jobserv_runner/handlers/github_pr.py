@@ -39,9 +39,6 @@ class GHStatusApi(JobServApi):
 
 
 class GitHub(GitPoller):
-    def _get_http_clone_token(self):
-        return self.rundef['secrets']['githubtok']
-
     @classmethod
     def get_jobserv(clazz, rundef):
         if rundef.get('simulator'):
