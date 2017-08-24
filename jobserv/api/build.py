@@ -102,7 +102,7 @@ def _promoted_as_json(storage, build):
     return rv
 
 
-@blueprint.route('/builds/promoted-builds/', methods=('GET',))
+@blueprint.route('/promoted-builds/', methods=('GET',))
 def promoted_build_list(proj):
     p = get_or_404(Project.query.filter_by(name=proj))
     q = Build.query.filter(
@@ -115,7 +115,7 @@ def promoted_build_list(proj):
     return paginate_custom('builds', q, lambda x: _promoted_as_json(s, x))
 
 
-@blueprint.route('/builds/promoted-builds/<name>/', methods=('GET',))
+@blueprint.route('/promoted-builds/<name>/', methods=('GET',))
 def promoted_build_get(proj, name):
     b = get_or_404(Build.query.join(Project).filter(
         Project.name == proj,

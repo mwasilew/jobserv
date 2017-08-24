@@ -93,7 +93,8 @@ class BuildAPITest(JobServTest):
         db.session.add(Run(b, 'run1'))
         for r in b.runs:
             r.set_status(BuildStatus.PASSED)
-        builds = self.get_json(self.urlbase + 'promoted-builds/')['builds']
+        url = '/projects/%s/promoted-builds/' % self.project.name
+        builds = self.get_json(url)['builds']
         self.assertEqual(0, len(builds))
 
     @patch('jobserv.api.build.Storage')
@@ -108,7 +109,8 @@ class BuildAPITest(JobServTest):
         b.status = BuildStatus.PROMOTED
         b.name = 'release-X'
         b.annotation = 'foo bar'
-        builds = self.get_json(self.urlbase + 'promoted-builds/')['builds']
+        url = '/projects/%s/promoted-builds/' % self.project.name
+        builds = self.get_json(url)['builds']
         self.assertEqual(1, len(builds))
         self.assertEqual('release-X', builds[0]['name'])
         self.assertEqual('foo bar', builds[0]['annotation'])
@@ -127,8 +129,8 @@ class BuildAPITest(JobServTest):
         b.status = BuildStatus.PROMOTED
         b.name = 'release-X'
         b.annotation = 'foo bar'
-        build = self.get_json(
-            self.urlbase + 'promoted-builds/release-X/')['build']
+        url = '/projects/%s/promoted-builds/release-X/' % self.project.name
+        build = self.get_json(url)['build']
         self.assertEqual('foo bar', build['annotation'])
 
     def test_promote_post(self):
