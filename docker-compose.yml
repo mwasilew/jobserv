@@ -26,6 +26,7 @@ services:
       DB_USER: jobserv
       DB_PASS: jobservpass
       FLASK_DEBUG: 1
+      FLASK_AUTO_MIGRATE: /data/ci_jobs/.flask-db-migrate.lock
       STORAGE_BACKEND: jobserv.storage.local_storage
       INTERNAL_API_KEY: ThisIsNotSecure
     volumes:
