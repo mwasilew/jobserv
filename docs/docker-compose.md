@@ -8,28 +8,12 @@ having to worry about Kubernetes. The following steps should get you going:
   docker build --build-arg APP_VERSION=local -t jobserv ./
 ~~~
 
-## Initial launch
-The first time you launch the system things will fail because the DB and
-HAProxy take a bit to initialize and the other services will fail. Additionally
-no database migrations will be applied. This okay, lets still launch with:
+## Launch the system
 ~~~
+  # The first time will take about a minute to for the DB and HAProxy services
+  # to initialize
   docker-compose up
 ~~~
-
-You'll see a bunch of stuff fly by in your terminal, but eventually the DB
-will be up and an "api" service will be running.
-
-## Perform a database migration
-You'll now need to jump into another x-term and run the database migration
-inside the "api" service. Here's a shortcut that should work:
-~~~
-  docker exec -it $(docker ps --filter name=api -q) flask db upgrade
-~~~
-
-## Really launch
-Everything should now be ready to run a real JobServ. So stop the current
-instance with a Ctrl-C where you ran the initial "docker-compose up" from.
-Then run "docker-compose up" again and everything should start up cleanly.
 
 ## Registering a Worker
 From another x-term or machine you need to verify the host is addressable. This
