@@ -138,7 +138,7 @@ def _create(args):
         }
         token = proj_def['script-repos'][name].get('token')
         if token:
-            rundef['script-repo']['token'] = rundef['secrets'][token]
+            rundef['script-repo']['token'] = token
         ref = proj_def['script-repos'][name].get('git-ref')
         if ref:
             rundef['script-repo']['git-ref'] = ref
