@@ -228,6 +228,8 @@ def run_get_artifact(proj, build_id, run, path):
         raise ApiError(
             404, {'message': 'Run in progress, no artifacts available'})
 
+    if r.status == BuildStatus.QUEUED:
+        return '', 200, {'Content-Type': 'text/plain'}
     return send_file(Storage().console_logfd(r, 'rb'), mimetype='text/plain')
 
 
