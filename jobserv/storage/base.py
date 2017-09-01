@@ -67,7 +67,10 @@ class BaseStorage(object):
     def console_logfd(self, run, mode='r'):
         path = os.path.join(JOBS_DIR, self._get_run_path(run, 'console.log'))
         if mode[0] in ('a', 'w') and not os.path.exists(path):
-            os.makedirs(os.path.dirname(path))
+            try:
+                os.makedirs(os.path.dirname(path))
+            except FileExistsError:
+                pass
         return open(path, mode)
 
     def copy_log(self, run):
