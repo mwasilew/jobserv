@@ -88,11 +88,6 @@ class SimpleHandler(object):
     def docker_run(self, mounts):
         env_file = os.path.join(self.run_dir, 'docker-env')
         envvars = (self.rundef.get('env') or {})
-        if 'TERM' not in envvars:
-            # Docker runs containers with pseudo-tty's and containers like
-            # Ubuntu will have TERM set to something that supports colors,
-            # which makes our text output look bad. This keeps things simple.
-            envvars['TERM'] = 'dumb'
 
         with self.log_context('Setting up container environment') as log:
             env = ['%s=%s' % (k, v) for k, v in envvars.items()]
@@ -113,7 +108,7 @@ class SimpleHandler(object):
                 cmd.append('--privileged')
             cmd.extend(['-v%s:%s' % (host, cont) for host, cont in mounts])
             cmd.extend(
-                ['-t', self.rundef['container'], self._container_command])
+                [self.rundef['container'], self._container_command])
             try:
                 return log.exec(cmd)
             except RunTimeoutError:
