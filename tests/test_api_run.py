@@ -260,7 +260,7 @@ class RunAPITest(JobServTest):
         ]
         self._post(self.urlbase + 'run0/', data, headers, 200)
         tests = [(x.name, x.status.name) for x in Test.query.all()]
-        self.assertEqual([('default', 'PASSED')], tests)
+        self.assertEqual([('default', 'FAILED')], tests)
         results = [(x.name, x.status.name) for x in TestResult.query.all()]
         expected = [('t1', 'PASSED'), ('t2', 'FAILED'), ('t3', 'PASSED')]
         self.assertEqual(expected, results)

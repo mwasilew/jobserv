@@ -134,9 +134,10 @@ def _failed_tests(storage, run):
                     result = fixups.get(result, result)
                     if result == 'FAILED':
                         failures = True
+                        if cur_test:
+                            cur_test.status = result
                     if not cur_test:
-                        cur_test = Test(
-                            run, 'default', None, BuildStatus.PASSED)
+                        cur_test = Test(run, 'default', None, result)
                         db.session.add(cur_test)
                         db.session.flush()
                     db.session.add(
