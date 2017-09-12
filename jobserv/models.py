@@ -11,6 +11,8 @@ import random
 import string
 import time
 
+import sqlalchemy.dialects.mysql.mysqldb as mysqldb
+
 from flask import url_for
 from flask_sqlalchemy import SQLAlchemy
 from sqlalchemy.exc import IntegrityError
@@ -20,6 +22,20 @@ from jobserv.settings import WORKER_DIR
 from jobserv.stats import CarbonClient
 
 db = SQLAlchemy()
+
+
+def hack_create_connect_args(*args, **kwargs):
+    # The mysqldb driver hard-codes rowcount to always be the number found
+    # and not the number updated:
+    # http://docs.sqlalchemy.org/en/latest/dialects/mysql.html#rowcount-support
+    # The Run.pop_queued code below needs to know if it updated a row or now.
+    rv = orig_create(*args, **kwargs)
+    rv[1]['client_flag'] = 0
+    return rv
+
+
+orig_create = mysqldb.MySQLDialect_mysqldb.create_connect_args
+mysqldb.MySQLDialect_mysqldb.create_connect_args = hack_create_connect_args
 
 
 def get_cumulative_status(obj, items):
@@ -306,6 +322,8 @@ class Run(db.Model, StatusMixin):
     tests = db.relationship('Test', cascade='save-update, merge, delete')
     worker = db.relationship('Worker')
 
+    in_test_mode = False
+
     __table_args__ = (
         # can't have the same named run for a single build
         db.UniqueConstraint('build_id', 'name', name='run_name_uc'),
@@ -363,6 +381,46 @@ class Run(db.Model, StatusMixin):
     def __repr__(self):
         return '<Run %s: %s>' % (
             self.name, self.status.name)
+
+    @staticmethod
+    def pop_queued(worker):
+        # A great read on MySql locking can be found here:
+        # https://www.percona.com/blog/2014/09/11/
+        # openstack-users-shed-light-on-percona-xtradb-cluster-deadlock-issues
+        # The big take-away is that select-for-update isn't a silver bullet.
+        # In fact, with what we are trying to do, its actually going to be more
+        # full-proof to try and update a single row and see if it changed.
+        # If it didn't change, that means we lost a race condition and the
+        # run has been assigned to another worker.
+        tags = '`host_tag` like "%s"' % worker.name
+        for t in worker.host_tags.split(','):
+            tags += ' OR `host_tag` like "%s"' % t.strip()
+        conn = db.session.connection().connection
+        cursor = conn.cursor()
+
+        # this is a trick to allow us to find the ID of the row we updated
+        id_trick = 'id = @run_id := id'
+        limit = 'ORDER BY `id` asc LIMIT 1'
+        if Run.in_test_mode:
+            # of course, sqlite isn't advanced enough, so we hack something
+            # for unit-testing
+            id_trick = 'id = id'
+            # libsqlite3 under alpine can't handle the limit statement
+            limit = ''
+
+        rows = cursor.execute('''
+            UPDATE runs SET
+                `_status` = 2, %s, `worker_name` = "%s"
+            WHERE
+                `_status` = 1
+              AND (%s)
+            %s''' % (id_trick, worker.name, tags, limit))
+        db.session.commit()
+        if Run.in_test_mode:
+            return Run.query.filter(Run.status == BuildStatus.RUNNING).first()
+        if rows == 1:
+            cursor.execute('select @run_id')
+            return Run.query.get(cursor.fetchone()[0])
 
 
 class RunEvents(db.Model, StatusMixin):

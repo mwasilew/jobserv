@@ -64,6 +64,7 @@ class WorkerAPITest(JobServTest):
 
     @patch('jobserv.api.worker.Storage')
     def test_worker_get_run(self, storage):
+        Run.in_test_mode = True
         rundef = {
             'run_url': 'foo',
             'runner_url': 'foo',
@@ -90,7 +91,7 @@ class WorkerAPITest(JobServTest):
         qs = 'available_runners=1&foo=2'
         resp = self.client.get(
             '/workers/w1/', headers=headers, query_string=qs)
-        self.assertEqual(200, resp.status_code)
+        self.assertEqual(200, resp.status_code, resp.data)
         data = json.loads(resp.data.decode())
         self.assertEqual(1, len(data['data']['worker']['run-defs']))
 

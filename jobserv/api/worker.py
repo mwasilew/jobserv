@@ -7,10 +7,9 @@ import os
 import urllib.parse
 
 from flask import Blueprint, request, send_file
-from sqlalchemy import or_, bindparam
 
 from jobserv.jsend import ApiError, get_or_404, jsendify, paginate
-from jobserv.models import BuildStatus, Run, Worker, db
+from jobserv.models import Run, Worker, db
 from jobserv.project import ProjectDefinition
 from jobserv.settings import (
     RUNNER,
@@ -84,28 +83,16 @@ def worker_get(name):
 
         avail = int(request.args.get('available_runners', '0'))
         if avail > 0 and w.enlisted:
-            # We could give more than one run, but for now try and give just
-            # one and let the runs spread out more amongst workers.
-            # MySql should have the ability to do a SKIP on locked rows, so
-            # that we don't have all the workers waiting on each other, but
-            # with_for_update(skip_locked=True) wasn't working in my testing.
-            tags = [Run.host_tag == w.name]
-            for t in w.host_tags.split(','):
-                t = t.lower().strip()
-                tags.append(bindparam('host_tag', t).like(Run.host_tag))
-            r = Run.query.filter(Run.status == BuildStatus.QUEUED, or_(*tags))
-            r = r.order_by(Run.id.desc()).with_for_update().first()
+            r = Run.pop_queued(w)
             if r:
-                # commit as running as quick as possible to free up the DB lock
-                r.set_status(BuildStatus.RUNNING)
-                r.worker = w
-                db.session.commit()
                 try:
                     s = Storage()
                     with s.console_logfd(r, 'a') as f:
                         f.write("# Run sent to worker: %s\n" % name)
                     data['run-defs'] = [_fix_run_urls(s.get_run_definition(r))]
+                    r.build.refresh_status()
                 except:
+                    r.worker = None
                     r.status = 'QUEUED'
                     db.session.commit()
                     raise
