@@ -22,6 +22,12 @@ def trigger_runs(storage, projdef, build, trigger, params, secrets):
             name = run['name']
             if name_fmt:
                 name = name_fmt.format(name=name)
+            if name in [x.name for x in build.runs]:
+                # NOTE: We can't really let the DB throw an IntegrityError,
+                # because this is called from the build.locked context and
+                # and a caller would need to call db.session.rollback which
+                # would cause them to lose the lock.
+                raise ValueError('A run named "%s" already exists' % name)
             r = Run(build, name, trigger['name'])
             db.session.add(r)
             db.session.flush()
@@ -30,6 +36,8 @@ def trigger_runs(storage, projdef, build, trigger, params, secrets):
             storage.set_run_definition(r, rundef)
     except ApiError:
         logging.exception('ApiError while triggering runs for: %r', trigger)
+        raise
+    except ValueError:
         raise
     except Exception as e:
         logging.exception('Unexpected error creating runs for: %r', trigger)

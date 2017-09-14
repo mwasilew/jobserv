@@ -6,7 +6,7 @@ import re
 
 import yaml
 
-from flask import Blueprint, request, send_file, url_for
+from flask import Blueprint, current_app, request, send_file, url_for
 
 from jobserv.storage import Storage
 from jobserv.jsend import ApiError, get_or_404, jsendify
@@ -93,14 +93,24 @@ def _handle_triggers(storage, run):
     params['H_TRIGGER_URL'] = request.url
 
     run_trigger = projdef.get_trigger(run.trigger)
-    for rt in run_trigger['runs']:
-        if rt['name'] == run.name:
-            if run.status == BuildStatus.PASSED:
-                _create_triggers(projdef, storage, run.build, params, secrets,
-                                 rt.get('triggers', []))
-            if run.build.complete:
-                _handle_build_complete(projdef, storage, run.build, params,
-                                       secrets, run_trigger)
+    try:
+        for rt in run_trigger['runs']:
+            if rt['name'] == run.name:
+                if run.status == BuildStatus.PASSED:
+                    _create_triggers(projdef, storage, run.build, params,
+                                     secrets, rt.get('triggers', []))
+                if run.build.complete:
+                    _handle_build_complete(projdef, storage, run.build, params,
+                                           secrets, run_trigger)
+    except ValueError as e:
+        current_app.logger.exception(
+            'Caught integrity error and failed run: %d', run.id)
+        run.set_status(BuildStatus.FAILED)
+        content = storage.get_artifact_content(run, 'console.log')
+        with storage.console_logfd(run, 'w') as f:
+            f.write(content)
+            f.write('\n\n== ERROR TRIGGERING RUN: %s\n' % e)
+        storage.copy_log(run)
 
 
 def _failed_tests(storage, run):

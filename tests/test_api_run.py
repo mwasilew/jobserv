@@ -213,6 +213,57 @@ class RunAPITest(JobServTest):
         self.assertEqual('QUEUED', run.status.name)
 
     @patch('jobserv.api.run.Storage')
+    def test_run_complete_triggers_name_error(self, storage):
+        m = Mock()
+        m.get_project_definition.return_value = json.dumps({
+            'timeout': 5,
+            'triggers': [
+                {
+                    'name': 'github',
+                    'type': 'github_pr',
+                    'runs': [{
+                        'name': 'run0',
+                        'host-tag': 'foo*',
+                        'triggers': [
+                            {'name': 'triggered'}
+                        ]
+                    }],
+                },
+                {
+                    'name': 'triggered',
+                    'type': 'simple',
+                    'runs': [{
+                        'name': 'collision-name',
+                        'host-tag': 'bar',
+                        'container': 'container-foo',
+                        'script': 'test',
+                    }],
+                },
+            ],
+            'scripts': {
+                'test': '#test#',
+            }
+        })
+        m.console_logfd.return_value = open('/dev/null', 'w')
+        m.get_run_definition.return_value = json.dumps({})
+        m.get_artifact_content.return_value = '#mocked line 1\n'
+        storage.return_value = m
+        r = Run(self.build, 'run0')
+        r.trigger = 'github'
+        r.status = BuildStatus.RUNNING
+        db.session.add(r)
+        # cause a duplicate name collision
+        db.session.add(Run(self.build, 'collision-name'))
+        db.session.commit()
+
+        headers = [
+            ('Authorization', 'Token %s' % r.api_key),
+            ('X-RUN-STATUS', 'PASSED'),
+        ]
+        self._post(self.urlbase + 'run0/', None, headers, 200)
+        self.assertEqual('RUNNING_WITH_FAILURES', r.build.status.name)
+
+    @patch('jobserv.api.run.Storage')
     def test_run_complete_tests_default(self, storage):
         m = Mock()
         m.get_project_definition.return_value = json.dumps({
