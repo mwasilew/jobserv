@@ -4,7 +4,7 @@
 """empty message
 
 Revision ID: ffc89c6a485e
-Revises: 
+Revises:
 Create Date: 2017-08-15 11:47:11.251467
 
 """
@@ -28,7 +28,7 @@ def upgrade():
     sa.UniqueConstraint('name')
     )
     op.create_table('workers',
-    sa.Column('name', sa.String(length=1024), nullable=False),
+    sa.Column('name', sa.String(length=512), nullable=False),
     sa.Column('distro', sa.String(length=1024), nullable=False),
     sa.Column('mem_total', sa.BigInteger(), nullable=False),
     sa.Column('cpu_total', sa.Integer(), nullable=False),
@@ -79,7 +79,7 @@ def upgrade():
     sa.Column('api_key', sa.String(length=80), nullable=False),
     sa.Column('trigger', sa.String(length=80), nullable=True),
     sa.Column('meta', sa.String(length=1024), nullable=True),
-    sa.Column('worker_name', sa.String(length=1024), nullable=True),
+    sa.Column('worker_name', sa.String(length=512), nullable=True),
     sa.Column('host_tag', sa.String(length=1024), nullable=True),
     sa.ForeignKeyConstraint(['build_id'], ['builds.id'], ),
     sa.ForeignKeyConstraint(['worker_name'], ['workers.name'], ),

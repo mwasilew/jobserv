@@ -295,7 +295,7 @@ class Run(db.Model, StatusMixin):
     trigger = db.Column(db.String(80))
     meta = db.Column(db.String(1024))
 
-    worker_name = db.Column(db.String(1024), db.ForeignKey('workers.name'))
+    worker_name = db.Column(db.String(512), db.ForeignKey('workers.name'))
 
     host_tag = db.Column(db.String(1024))
 
@@ -471,7 +471,7 @@ class TestResult(db.Model, StatusMixin):
 class Worker(db.Model):
     __tablename__ = 'workers'
 
-    name = db.Column(db.String(1024), primary_key=True)
+    name = db.Column(db.String(512), primary_key=True)
     distro = db.Column(db.String(1024), nullable=False)
     mem_total = db.Column(db.BigInteger, nullable=False)
     cpu_total = db.Column(db.Integer, nullable=False)
