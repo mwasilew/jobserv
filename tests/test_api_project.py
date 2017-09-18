@@ -3,6 +3,8 @@
 
 import json
 
+from unittest.mock import patch
+
 from tests import JobServTest
 
 
@@ -27,3 +29,10 @@ class ProjectAPITest(JobServTest):
         r = self.client.get('/projects/job-2/')
         self.assertEqual(404, r.status_code)
         self.assertIn('message', json.loads(r.data.decode()))
+
+    @patch('jobserv.permissions.project_can_access')
+    def test_project_permission(self, can_access):
+        can_access.return_value = False
+        self.create_projects('job-1')
+        r = self.client.get('/projects/job-1/')
+        self.assertEqual(404, r.status_code)

@@ -14,6 +14,8 @@ if _fmt:
 else:
     SQLALCHEMY_DATABASE_URI = 'sqlite:////tmp/test.db'
 
+PERMISSIONS_MODULE = os.environ.get(
+    'PERMISSIONS_MODULE', 'jobserv.permissions')
 
 JOBS_DIR = os.environ.get('JOBS_DIR', '/data/ci_jobs')
 WORKER_DIR = os.environ.get('WORKER_DIR', '/data/workers')

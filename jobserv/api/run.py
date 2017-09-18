@@ -223,7 +223,6 @@ def run_get_definition(proj, build_id, run):
 
 @blueprint.route('/<run>/<path:path>', methods=('GET',))
 def run_get_artifact(proj, build_id, run, path):
-    # TODO Secure this call
     r = _get_run(proj, build_id, run)
     if r.complete:
         storage = Storage()

@@ -3,7 +3,9 @@
 
 import datetime
 
-from flask import Flask
+from importlib import import_module
+
+from flask import Flask, request
 from flask.json import JSONEncoder
 from flask_migrate import Migrate
 
@@ -11,6 +13,11 @@ from werkzeug.contrib.fixers import ProxyFix
 from werkzeug.routing import UnicodeConverter
 
 from jobserv.settings import PROJECT_NAME_REGEX
+
+from jobserv.jsend import jsendify
+from jobserv.settings import PERMISSIONS_MODULE
+
+permissions = import_module(PERMISSIONS_MODULE)
 
 
 class ISO8601_JSONEncoder(JSONEncoder):
@@ -25,6 +32,22 @@ class ProjectConverter(UnicodeConverter):
         super().__init__(*args, *kwargs)
         if PROJECT_NAME_REGEX:
             self.regex = PROJECT_NAME_REGEX
+
+
+def _user_has_permission():
+    # These are secured by "authenticate_runner" and "@internal_api"
+    if request.method in ('POST', 'PATCH', 'PUT'):
+        return
+
+    if request.path.startswith('/projects/') and len(request.path) > 10:
+        path = request.path[10:]
+        if path and not permissions.project_can_access(path):
+            return jsendify('Object does not exist: ' + request.path, 404)
+
+    if request.path.startswith('/health/'):
+        path = request.path[8:]
+        if not permissions.health_can_access(path):
+            return jsendify('Object does not exist: ' + request.path, 404)
 
 
 def create_app(settings_object='jobserv.settings'):
@@ -47,4 +70,5 @@ def create_app(settings_object='jobserv.settings'):
         app.register_blueprint(Storage.blueprint)
 
     app.json_encoder = ISO8601_JSONEncoder
+    app.before_request(_user_has_permission)
     return app
