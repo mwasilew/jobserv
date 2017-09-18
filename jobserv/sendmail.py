@@ -4,6 +4,7 @@
 import contextlib
 import logging
 import smtplib
+import time
 
 from email.mime.text import MIMEText
 
@@ -87,6 +88,20 @@ def _get_build_stats(build):
     return b_stats
 
 
+def _send(build, message):
+    last_exc = None
+    for x in range(3):
+        with smtp_session() as s:
+            try:
+                s.send_message(message)
+                return
+            except Exception as e:
+                last_exc = e
+                time.sleep(1)
+    log.error('Unable to send build email for: %s %d: %r',
+              build.project.name, build.build_id, last_exc)
+
+
 def notify_build_complete(build, to_list):
     subject = 'jobserv: %s build #%d : %s' % (
         build.project.name, build.build_id, build.status.name)
@@ -110,5 +125,4 @@ def notify_build_complete(build, to_list):
     msg['Subject'] = subject
     msg['From'] = 'Do Not Reply <donot-reply@linaro.org>'
     msg['To'] = to_list
-    with smtp_session() as s:
-        s.send_message(msg)
+    _send(build, msg)
