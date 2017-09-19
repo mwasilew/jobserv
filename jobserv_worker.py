@@ -5,6 +5,7 @@
 import argparse
 import datetime
 import fcntl
+import hashlib
 import importlib
 import json
 import logging
@@ -37,7 +38,12 @@ log = logging.getLogger('jobserv-worker')
 logging.getLogger('requests').setLevel(logging.WARNING)
 
 
-def _create_conf(server_url, version, concurrent_runs, host_tags):
+def _create_conf(server_url, hostname, concurrent_runs, host_tags):
+    with open(script, 'rb') as f:
+        h = hashlib.md5()
+        h.update(f.read())
+        version = h.hexdigest()
+
     config.add_section('jobserv')
     config['jobserv']['server_url'] = server_url
     config['jobserv']['version'] = version
@@ -47,8 +53,10 @@ def _create_conf(server_url, version, concurrent_runs, host_tags):
     chars = string.ascii_letters + string.digits + '!@#$^&*~'
     config['jobserv']['host_api_key'] =\
         ''.join(random.choice(chars) for _ in range(32))
-    with open('/etc/hostname') as f:
-        config['jobserv']['hostname'] = f.read().strip()
+    if not hostname:
+        with open('/etc/hostname') as f:
+            hostname = f.read().strip()
+    config['jobserv']['hostname'] = hostname
     with open(config_file, 'w') as f:
         config.write(f, True)
 
@@ -212,7 +220,7 @@ class JobServ(object):
 def cmd_register(args):
     '''Register this host with the configured JobServ server'''
     _create_conf(
-        args.server_url, args.version, args.concurrent_runs, args.host_tags)
+        args.server_url, args.hostname, args.concurrent_runs, args.host_tags)
     p = HostProps()
     args.server.create_host(p.data)
     p.cache()
@@ -354,10 +362,12 @@ def get_args(args=None):
 
     p = sub.add_parser('register', help='Register this host with the server')
     p.set_defaults(func=cmd_register)
+    p.add_argument('--hostname',
+                   help='''Worker name to register. If none is provided, the
+                        value of /etc/hostname will be used.''')
     p.add_argument('--concurrent-runs', type=int, default=2,
                    help='Maximum number of current runs. Default=%(default)d')
     p.add_argument('server_url')
-    p.add_argument('version')
     p.add_argument('host_tags', help='Comma separated list')
 
     p = sub.add_parser('uninstall', help='Uninstall the client')
