@@ -542,6 +542,7 @@ class Worker(db.Model):
     concurrent_runs = db.Column(db.Integer, nullable=False)
     host_tags = db.Column(db.String(1024))
     online = db.Column(db.Boolean)
+    surges_only = db.Column(db.Boolean, default=False)
 
     def __init__(self, name, distro, mem_total, cpu_total, cpu_type, api_key,
                  concurrent_runs, host_tags):
@@ -575,12 +576,27 @@ class Worker(db.Model):
             'concurrent_runs': self.concurrent_runs,
             'host_tags': [x for x in self.host_tags.split(',')],
             'online': self.online,
+            'surges_only': self.surges_only,
         }
+
+    @staticmethod
+    def in_queue_surge():
+        '''We have some workers that we only want to use when the backlog
+        gets big.'''
+        # for now make this a manual thing until we start to figure out a
+        # good ratio like when QUEUE_SIZE / NUM_WORKERS > NUM_WORKERS * 3
+        # This logic should probabl also get done outside of this context,
+        # since it could get hit every X seconds by every surge worker. eg
+        # We should probably create a single daemon that enables/disables this.
+        return os.path.exists(os.path.join(WORKER_DIR, 'enable_surge'))
 
     @property
     def available(self):
         '''Returns True if the worker should be able to accept runs.'''
-        return self.enlisted
+        if self.enlisted:
+            if not self.surges_only or self.in_queue_surge():
+                return True
+        return False
 
     @property
     def pings_log(self):
