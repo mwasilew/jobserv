@@ -354,7 +354,7 @@ def get_args(args=None):
 
     p = sub.add_parser('register', help='Register this host with the server')
     p.set_defaults(func=cmd_register)
-    p.add_argument('--concurrent-runs', type=int, default=2,
+    p.add_argument('--concurrent-runs', type=int, default=1,
                    help='Maximum number of current runs. Default=%(default)d')
     p.add_argument('server_url')
     p.add_argument('version')
