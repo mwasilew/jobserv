@@ -30,8 +30,7 @@ Assuming a $JOBSERV_HOST is set to the instance you can register a host with:
   cd $HOME/jobserv-worker
   curl http://$JOBSERV_HOST/worker > jobserv_worker.py
   chmod +x jobserv_worker.py
-  ./jobserv_worker.py register http://$JOBSERV_HOST 1 amd64
-  ./jobserv_worker.py check  # check in and it will update the client
+  ./jobserv_worker.py register http://$JOBSERV_HOST amd64
 
   # the worker is now registered but not *enlisted*, so it won't be able to
   # handle Runs. From the JobServ's host, view you host and then enlist it
