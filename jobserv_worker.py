@@ -5,6 +5,7 @@
 import argparse
 import datetime
 import fcntl
+import hashlib
 import importlib
 import json
 import logging
@@ -37,7 +38,12 @@ log = logging.getLogger('jobserv-worker')
 logging.getLogger('requests').setLevel(logging.WARNING)
 
 
-def _create_conf(server_url, version, concurrent_runs, host_tags):
+def _create_conf(server_url, concurrent_runs, host_tags):
+    with open(script, 'rb') as f:
+        h = hashlib.md5()
+        h.update(f.read())
+        version = h.hexdigest()
+
     config.add_section('jobserv')
     config['jobserv']['server_url'] = server_url
     config['jobserv']['version'] = version
@@ -211,8 +217,7 @@ class JobServ(object):
 
 def cmd_register(args):
     '''Register this host with the configured JobServ server'''
-    _create_conf(
-        args.server_url, args.version, args.concurrent_runs, args.host_tags)
+    _create_conf(args.server_url, args.concurrent_runs, args.host_tags)
     p = HostProps()
     args.server.create_host(p.data)
     p.cache()
@@ -357,7 +362,6 @@ def get_args(args=None):
     p.add_argument('--concurrent-runs', type=int, default=1,
                    help='Maximum number of current runs. Default=%(default)d')
     p.add_argument('server_url')
-    p.add_argument('version')
     p.add_argument('host_tags', help='Comma separated list')
 
     p = sub.add_parser('uninstall', help='Uninstall the client')
