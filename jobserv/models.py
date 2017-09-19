@@ -578,6 +578,11 @@ class Worker(db.Model):
         }
 
     @property
+    def available(self):
+        '''Returns True if the worker should be able to accept runs.'''
+        return self.enlisted
+
+    @property
     def pings_log(self):
         return os.path.join(WORKER_DIR, self.name, 'pings.log')
 

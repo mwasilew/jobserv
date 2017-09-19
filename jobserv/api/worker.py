@@ -81,8 +81,8 @@ def worker_get(name):
         if w.enlisted:
             w.ping(**request.args)
 
-        avail = int(request.args.get('available_runners', '0'))
-        if avail > 0 and w.enlisted:
+        runners = int(request.args.get('available_runners', '0'))
+        if runners > 0 and w.available:
             r = Run.pop_queued(w)
             if r:
                 try:
