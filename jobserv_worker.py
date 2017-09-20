@@ -320,7 +320,21 @@ def _docker_clean():
         containers = subprocess.check_output(
             ['docker', 'ps', '--filter', 'status=exited', '-q'])
         containers = containers.decode().splitlines()
-        subprocess.call(['docker', 'rm', '-v'] + containers)
+        cmd = ['docker', 'inspect', '--format', '{{.State.FinishedAt}}']
+        times = subprocess.check_output(cmd + containers).decode().splitlines()
+
+        now = datetime.datetime.now()
+        deletes = []
+        for i, ts in enumerate(times):
+            # Times are like: 2017-09-19T21:17:33.465435028Z
+            # Strip of the nanoseconds and parse the date
+            ts = ts.split('.')[0]
+            ts = datetime.datetime.strptime(ts, '%Y-%m-%dT%H:%M:%S')
+            if (now - ts).total_seconds() > 7200:  # 2 hours old
+                deletes.append(containers[i])
+        if deletes:
+            log.info('Cleaning up old containers:\n  %s', '\n  '.join(deletes))
+            subprocess.check_output(['docker', 'rm', '-v'] + deletes)
     except subprocess.CalledProcessError as e:
         log.exception(e)
 
