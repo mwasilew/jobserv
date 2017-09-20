@@ -269,10 +269,11 @@ def _delete_rundir(rundir):
     try:
         shutil.rmtree(rundir)
     except PermissionError:
-        log.error('Unable to cleanup run with shutil.rmtree, try sudo rm -rf')
+        log.info(
+            'Unable to cleanup Run as normal user, trying sudo rm -rf')
         subprocess.check_call(['sudo', '/bin/rm', '-rf', rundir])
     except:
-        log.exception('Unable to delete run directory: ' + rundir)
+        log.exception('Unable to delete Run\'s directory: ' + rundir)
         sys.exit(1)
 
 
