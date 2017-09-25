@@ -5,9 +5,9 @@
 #       -t github \
 #       -r unit-test \
 #       -w /tmp/persistent-volume-simulator \
-#       -p GH_OWNER=linaro-technologies-dev \
-#       -p GH_REPO=ltd-ci-jobserv \
-#       -p GH_PRNUM=35 \
+#       -p GH_OWNER=linaro-technologies \
+#       -p GH_REPO=jobserv \
+#       -p GH_PRNUM=8 \
 #       -s githubtok=<your github personal access token>
 timeout: 5
 triggers:
@@ -15,7 +15,7 @@ triggers:
     type: github_pr
     runs:
       - name: unit-test
-        container: linarotechnologies/python-builder
+        container: python:3.5-alpine
         host-tag: amd64
         script: unit-test
         persistent-volumes:
@@ -23,7 +23,8 @@ triggers:
           # container at /var/cache-venv
           venv_cache-foo.12: /var/cache-venv
       - name: flake8
-        container: linarotechnologies/python-builder
+        container: python:3.5-alpine
+        script: unit-test
         host-tag: amd64
         script: flake8
     email:
