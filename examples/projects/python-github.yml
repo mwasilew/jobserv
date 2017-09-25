@@ -5,9 +5,9 @@
 #       -t github \
 #       -r flake8 \
 #       -w /tmp/python-github-simulator \
-#       -p GH_OWNER=linaro-technologies-dev \
-#       -p GH_REPO=ltd-ci-jobserv \
-#       -p GH_PRNUM=35 \
+#       -p GH_OWNER=linaro-technologies \
+#       -p GH_REPO=jobserv \
+#       -p GH_PRNUM=8 \
 #       -s githubtok=<your github personal access token>
 timeout: 5
 triggers:
@@ -15,11 +15,11 @@ triggers:
     type: github_pr
     runs:
       - name: unit-test
-        container: linarotechnologies/python-builder
+        container: python:3.5-alpine
         host-tag: amd64
         script: unit-test
       - name: flake8
-        container: linarotechnologies/python-builder
+        container: python:3.5-alpine
         host-tag: amd64
         script: flake8
     email:
