@@ -6,13 +6,13 @@ triggers:
     type: github_pr
     runs:
       - name: unit-test
-        container: linarotechnologies/python-builder
+        container: python:3.5-alpine
         host-tag: amd64
         script-repo:
           name: tools-repo
           path: unit-test.sh
       - name: flake8
-        container: linarotechnologies/python-builder
+        container: python:3.5-alpine
         host-tag: amd64
         script-repo:
           name: tools-repo
