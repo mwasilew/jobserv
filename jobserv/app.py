@@ -2,8 +2,12 @@
 # Author: Andy Doan <andy.doan@linaro.org>
 
 import json
+import random
+import string
+import sys
 
 import click
+import requests
 
 from jobserv.flask import create_app
 from jobserv.git_poller import run
@@ -54,6 +58,47 @@ def project_create(name):
     db.session.commit()
 
 
+def _register_gitlab_hook(project, url, api_token, hook_token, server_name):
+    data = {
+        'url': 'https://%s/gitlab/%s/' % (server_name, project),
+        'merge_request_events': True,
+        'note_events': True,
+        'enable_ssl_verification': True,
+        'token': hook_token,
+    }
+    headers = {'PRIVATE-TOKEN': api_token}
+
+    resp = requests.post(url, json=data, headers=headers)
+    if resp.status_code != 201:
+        sys.exit('ERROR adding webhook: %d\n%s' % (
+            resp.status_code, resp.text))
+
+
+def _register_github_hook(project, url, api_token, hook_token, server_name):
+    data = {
+        'name': 'web',
+        'active': True,
+        'events': [
+            'pull_request',
+            'issue_comment',
+        ],
+        'secret': hook_token,
+        'config': {
+            'url': 'https://%s/github/%s/' % (server_name, project),
+            'content_type': 'json',
+        }
+    }
+    headers = {
+        'Content-Type': 'application/json',
+        'Authorization': 'token ' + api_token,
+    }
+
+    resp = requests.post(url, json=data, headers=headers)
+    if resp.status_code != 201:
+        sys.exit('ERROR adding webhook: %d\n%s' % (
+            resp.status_code, resp.text))
+
+
 @project.command('add-trigger')
 @click.argument('project')
 @click.option('--user', '-u', required=True)
@@ -62,9 +107,15 @@ def project_create(name):
 @click.option('--secret', '-s', 'secrets', multiple=True)
 @click.option('--definition_repo', '-r', default=None)
 @click.option('--definition_file', '-f', default=None)
+@click.option('--hook_url', default=None)
+@click.option('--server_name', default=None)
 def project_add_trigger(project, user, type, secrets=None,
-                        definition_repo=None, definition_file=None):
-    secret_map = {}
+                        definition_repo=None, definition_file=None,
+                        hook_url=None, server_name=None):
+    key = ''.join(random.SystemRandom().choice(
+        string.ascii_lowercase + string.ascii_uppercase + string.digits)
+            for _ in range(32))
+    secret_map = {'webhook-key': key}
     for secret in (secrets or []):
         k, v = secret.split('=')
         secret_map[k.strip()] = v.strip()
@@ -76,6 +127,19 @@ def project_add_trigger(project, user, type, secrets=None,
         return
     db.session.add(ProjectTrigger(
         user, type, p, definition_repo, definition_file, secret_map))
+
+    if type == TriggerTypes.gitlab_mr.value:
+        if 'gitlabtok' not in secret_map or 'gitlabuser' not in secret_map:
+            raise ValueError(
+                '"gitlabtok" and "gitlabuser" are required secrets')
+        _register_gitlab_hook(
+            project, hook_url, secret_map['gitlabtok'], key, server_name)
+    elif type == TriggerTypes.github_pr.value:
+        if 'githubtok' not in secret_map:
+            raise ValueError('"githubtok" is required in secrets')
+        _register_github_hook(
+            project, hook_url, secret_map['githubtok'], key, server_name)
+
     db.session.commit()
 
 
