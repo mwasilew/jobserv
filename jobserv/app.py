@@ -80,6 +80,7 @@ def _register_github_hook(project, url, api_token, hook_token, server_name):
         'active': True,
         'events': [
             'pull_request',
+            'pull_request_review_comment',
             'issue_comment',
         ],
         'secret': hook_token,
