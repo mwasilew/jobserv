@@ -144,7 +144,9 @@ class SimpleHandler(object):
            This is handy for Android repo style builds that exist in a private
            repository. By setting this in .netrc everything just works.
         """
-        # we only do githubtok now
+        # NOTE: Curl (used by git) doesn't look at the $NETRC environment
+        # for overriding the .netrc location. We have to assume the
+        # container's $HOME is /root
         token = (self.rundef.get('secrets') or {}).get('githubtok')
         if token:
             with self.log_context('Creating container .netrc file') as log:
@@ -153,9 +155,19 @@ class SimpleHandler(object):
                 with open(netrc, 'w') as f:
                     f.write('machine github.com\n')
                     f.write('login %s\n' % token)
-                # Curl (used by git) doesn't look at the $NETRC environment
-                # for overriding the .netrc location. We have to assume the
-                # container's $HOME is /root
+                return netrc, '/root/.netrc'
+
+        # we have to guess at a gitlab "machine" name
+        url = (self.rundef.get('script-repo') or {}).get('clone-url')
+        token = (self.rundef.get('secrets') or {}).get('gitlabtok')
+        if token and url:
+            with self.log_context('Creating container .netrc file') as log:
+                log.info('Creating a gitlab token entry')
+                user = self.rundef['secrets']['gitlabuser']
+                netrc = os.path.join(self.run_dir, '.netrc')
+                with open(netrc, 'w') as f:
+                    f.write('machine %s\n' % urllib.parse.urlparse(url).netloc)
+                    f.write('login %s\npassword %s\n' % (user, token))
                 return netrc, '/root/.netrc'
 
     def _clone_script_repo(self, log, repo, dst):
@@ -163,9 +175,16 @@ class SimpleHandler(object):
         log.info('Repo is: %s', url)
         token = repo.get('token')
         if token:
-            token = self.rundef['secrets'][token]
-            p = urllib.parse.urlsplit(url)
-            url = p.scheme + '://' + token + '@' + p.netloc + p.path
+            parts = token.split(':')
+            if len(parts) == 1:
+                token = self.rundef['secrets'][token]
+                p = urllib.parse.urlsplit(url)
+                url = p.scheme + '://' + token + '@' + p.netloc + p.path
+            elif len(parts) == 2:
+                token = self.rundef['secrets'][parts[0]]
+                token += ':' + self.rundef['secrets'][parts[1]]
+                p = urllib.parse.urlsplit(url)
+                url = p.scheme + '://' + token + '@' + p.netloc + p.path
 
         if not log.exec(['git', 'clone', url, dst]):
             raise HandlerError('Unable to clone repo: ' + repo['clone-url'])
