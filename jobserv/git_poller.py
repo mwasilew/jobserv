@@ -41,9 +41,10 @@ def _get_projdef(name, proj):
     defile = proj['poller_def'].get('definition_file')
     if not defile:
         defile = name + '.yml'
+    gitlab = proj['poller_def'].get('secrets', {}).get('gitlabtok')
 
-    if 'github.com' not in repo:
-        log.error('Non-GitHub repos are not yet supported for definitions')
+    if 'github.com' not in repo and not gitlab:
+        log.error('Only GitHub and GitlLab repos are supported')
         return None
 
     headers = proj.setdefault('projdef_headers', {})
@@ -51,10 +52,15 @@ def _get_projdef(name, proj):
     if token:
         headers['Authorization'] = 'token ' + token
 
-    url = repo.replace('github.com', 'raw.githubusercontent.com')
-    if url[-1] != '/':
-        url += '/'
-    url += 'master/' + defile
+    if gitlab:
+        headers['PRIVATE-TOKEN'] = gitlab
+        url = repo.replace('.git', '') + '/raw/master/' + defile
+    else:
+        url = repo.replace('github.com', 'raw.githubusercontent.com')
+        if url[-1] != '/':
+            url += '/'
+        url += 'master/' + defile
+
     r = requests.get(url, headers=headers)
     if r.status_code == 200:
         try:
