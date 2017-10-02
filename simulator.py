@@ -250,7 +250,7 @@ def get_args(args=None):
                         help='Create a workspace for executing simulated run.')
     p.set_defaults(func=_create)
     p.add_argument('--jobserv', '-j',
-                   default='https://api.linarotechnologies.org/',
+                   default='https://api.opensourcefoundries.com/',
                    help='The JobServ to query. Default=%(default)s')
     p.add_argument('--proj-def', '-d', required=True,
                    type=argparse.FileType('r'),
@@ -289,7 +289,7 @@ def get_args(args=None):
                         help='Check for updates to this simulator script')
     p.set_defaults(func=_check_for_updates)
     p.add_argument('--jobserv', '-j',
-                   default='https://api.linarotechnologies.org/',
+                   default='https://api.opensourcefoundries.com/',
                    help='The JobServ to query. Default=%(default)s')
 
     args = parser.parse_args(args)
