@@ -54,7 +54,7 @@ def _get_proj_def(trigger, token, params):
         name = trigger.definition_file
         if not name:
             name = trigger.project.name + '.yml'
-        url = trigger.definition_repo
+        url = trigger.definition_repo.replace('.git', '')
         if url[-1] != '/':
             url += '/'
         url += 'raw/master/' + name

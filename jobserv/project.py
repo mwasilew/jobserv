@@ -124,9 +124,9 @@ class ProjectDefinition(object):
                 run['script-repo']['name']].copy()
             rundef['script-repo']['path'] = run['script-repo']['path']
             token = rundef['script-repo'].get('token')
-            if token:
+            for token in (token or '').split(':'):
                 val = secrets.get(token)
-                if not val:
+                if token and not val:
                     err = 'The script-repo requires a token(%s) not defined ' \
                           'in the run\'s secrets.\n' % token
                     err += 'Secret keys sent to build: %r' % secrets.keys()

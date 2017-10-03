@@ -61,6 +61,21 @@ def _update_status(test, status, msg, results=None):
                 log.error(
                     'Unable to update PR: %d: %s', resp.status_code, resp.text)
 
+        url = meta.get('gitlab_url')
+        if url:
+            headers = meta['gitlab_headers']
+            data = meta['gitlab_data']
+            data['state'] = 'running'
+            log.info('Updating gitlab MR to %s for %s', status, url)
+            if status == 'PASSED':
+                data['state'] = 'success'
+            elif status == 'FAILED':
+                data['state'] = 'failure'
+            resp = requests.post(url, json=data, headers=headers)
+            if resp.status_code not in (200, 201):
+                log.error(
+                    'Unable to update MR: %d: %s', resp.status_code, resp.text)
+
 
 def _get_results(yaml_buff):
     status = 'FAILED'
