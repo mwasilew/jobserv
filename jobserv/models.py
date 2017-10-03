@@ -403,7 +403,7 @@ class Run(db.Model, StatusMixin):
 
         # this is a trick to allow us to find the ID of the row we updated
         id_trick = 'id = @run_id := id'
-        limit = 'ORDER BY `id` asc LIMIT 1'
+        limit = 'ORDER BY `build_id`, `id` asc LIMIT 1'
         if Run.in_test_mode:
             # of course, sqlite isn't advanced enough, so we hack something
             # for unit-testing
