@@ -93,6 +93,7 @@ class TriggerTypes(enum.Enum):
     lava = 4
     lava_pr = 5
     gitlab_mr = 6
+    lava_mr = 7
 
 
 class ProjectTrigger(db.Model):
