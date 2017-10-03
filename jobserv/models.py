@@ -184,9 +184,10 @@ class Build(db.Model, StatusMixin):
     annotation = db.Column(db.Text())
 
     project = db.relationship(Project)
-    runs = db.relationship('Run', cascade='save-update, merge, delete')
-    status_events = db.relationship(
-        'BuildEvents', cascade='save-update, merge, delete')
+    runs = db.relationship('Run', order_by='Run.id',
+                           cascade='save-update, merge, delete')
+    status_events = db.relationship('BuildEvents', order_by='BuildEvents.id',
+                                    cascade='save-update, merge, delete')
 
     __table_args__ = (
         db.UniqueConstraint('proj_id', 'build_id', name='build_id_uc'),
@@ -317,10 +318,11 @@ class Run(db.Model, StatusMixin):
     host_tag = db.Column(db.String(1024))
 
     build = db.relationship(Build)
-    status_events = db.relationship(
-        'RunEvents', cascade='save-update, merge, delete')
+    status_events = db.relationship('RunEvents', order_by='RunEvents.id',
+                                    cascade='save-update, merge, delete')
 
-    tests = db.relationship('Test', cascade='save-update, merge, delete')
+    tests = db.relationship('Test', order_by='Test.id',
+                            cascade='save-update, merge, delete')
     worker = db.relationship('Worker')
 
     in_test_mode = False
@@ -452,8 +454,8 @@ class Test(db.Model, StatusMixin):
     _status = db.Column(db.Integer)
 
     run = db.relationship(Run)
-    results = db.relationship(
-        'TestResult', cascade='save-update, merge, delete')
+    results = db.relationship('TestResult', order_by='TestResult.id',
+                              cascade='save-update, merge, delete')
 
     def __init__(self, run, name, context, status=BuildStatus.QUEUED):
         self.run_id = run.id
