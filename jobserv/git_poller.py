@@ -88,6 +88,9 @@ def _get_refs(repo_url, proj):
     ghtok = proj['poller_def'].get('secrets', {}).get('githubtok')
     if ghtok:
         auth = HTTPBasicAuth(proj['poller_def']['user'], ghtok)
+
+    gltok = proj['poller_def'].get('secrets', {}).get('gitlabtok')
+
     if not repo_url.endswith('.git'):
         # access these URL on github requires .git and it seems to be needed
         # for things like cgit and gitweb as well
@@ -96,6 +99,17 @@ def _get_refs(repo_url, proj):
         repo_url += '/'
     repo_url += 'info/refs?service=git-upload-pack'
     resp = requests.get(repo_url, auth=auth)
+    if gltok and resp.status_code == 401:
+        # this might be a gitlab repo, try with the token
+        # we have to try unauthenticated first, because it could be a non-git
+        # repo, that needs gitlab credentials for the script-repo stuff
+        log.debug('Trying repo(%s) with gitlab credentials', repo_url)
+        user = proj['poller_def'].get('secrets', {}).get('gitlabuser')
+        repo_url = repo_url.replace('://', '://%s:%s@' % (user, gltok))
+        resp = requests.get(repo_url)
+        # TODO flag this as a gitlab repo and then add in logic like
+        # _github_log below
+
     if resp.status_code != 200:
         log.error('Unable to check %s for changes: %d %s',
                   repo_url, resp.status_code, resp.reason)
