@@ -39,13 +39,33 @@ def _get_params(data):
     status_url = status_url.replace(user_repo, replace)
     status_url += '/statuses/' + mr['last_commit']['id']
 
+    target_repo = mr['target']['path_with_namespace']
+    replace = 'api/v4/projects/' + quote_plus(target_repo)
+    api_url = mr['target']['web_url'].replace(target_repo, replace)
+
     return {
         'GIT_SHA': mr['last_commit']['id'],
         'GIT_URL': mr['source']['git_http_url'],
         'GL_STATUS_URL': status_url,
         'GL_TARGET_REPO': mr['target']['git_http_url'],
         'GL_MR': mr_url,
+        'GL_MR_API': api_url + '/merge_requests/%s' % mr['iid'],
     }
+
+
+def _set_base_sha(params, token):
+    url = params['GL_MR_API'] + '/versions'
+    headers = {
+        'Content-Type': 'application/json',
+        'PRIVATE-TOKEN': token,
+    }
+    r = requests.get(url, headers=headers)
+    if r.status_code == 200:
+        params['GIT_SHA_BASE'] = r.json()[0]['base_commit_sha']
+    else:
+        raise ApiError(r.status_code,
+                       'Unable to find base commit from %s:\n%s' % (
+                           url, r.text))
 
 
 def _get_proj_def(trigger, token, params):
@@ -165,6 +185,7 @@ def on_webhook(proj):
     token = secrets['gitlabtok']
 
     try:
+        _set_base_sha(params, token)
         trig, proj = _get_proj_def(trigger, token, params)
         b = trigger_build(trigger.project, reason, trig, params, secrets, proj)
         _update_pr(b, params['GL_STATUS_URL'], token)
