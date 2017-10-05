@@ -75,6 +75,12 @@ class ProjectDefinition(object):
                                     name='{name}', loop=name)
                     trigger['runs'].remove(run)
 
+            path = 'triggers/' + trigger['name']
+            for run in trigger['runs']:
+                if len(run['name']) >= 80:
+                    msg = 'Name of run must be less than 80 characters'
+                    raise SchemaError(msg, path=path + '/runs/' + run['name'])
+
     def get_trigger(self, name):
         for trigger in self.triggers:
             if trigger['name'] == name:
@@ -213,3 +219,5 @@ class ProjectDefinition(object):
                         raise SchemaError(
                             msg, path=path + '/runs/' + run['name'])
         clazz._test_recursive_triggers(data)
+        inst = clazz(data)
+        return inst._expand_run_loops()
