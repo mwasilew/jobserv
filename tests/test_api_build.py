@@ -72,8 +72,7 @@ class BuildAPITest(JobServTest):
         data = self.get_json(self.urlbase + 'latest/')['build']
         self.assertEqual(b.build_id, data['build_id'])
 
-    @patch('jobserv.storage.gce_storage.storage')
-    def test_build_trigger_fails(self, storage):
+    def test_build_trigger_fails(self):
         # ensure we have a graceful failure when we are triggered
         headers = {}
         r = self.client.post(self.urlbase, data={}, headers=headers)
@@ -84,7 +83,6 @@ class BuildAPITest(JobServTest):
         self.assertEqual(500, r.status_code)
         data = json.loads(r.data.decode())
         self.assertEqual('error', data['status'])
-        self.assertIn('console.log', r.headers['Location'])
 
     @patch('jobserv.api.build.Storage')
     def test_promote_list_empty(self, storage):

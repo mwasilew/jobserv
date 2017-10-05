@@ -98,6 +98,15 @@ class ProjectSchemaTest(JobServTest):
             with self.assertRaisesRegex(Exception, exp):
                 ProjectDefinition.validate_data(data)
 
+    def test_run_name_too_long(self):
+        with open(os.path.join(self.examples, 'python-github.yml')) as f:
+            data = yaml.load(f)
+            # cause an infinite loop for triggers
+            data['triggers'][0]['runs'][0]['name'] = '1' * 80
+            exp = 'Name of run must be less than 80 characters'
+            with self.assertRaisesRegex(Exception, exp):
+                ProjectDefinition.validate_data(data)
+
     def test_loop_on(self):
         with open(os.path.join(self.examples, 'python-github.yml')) as f:
             data = yaml.load(f)
