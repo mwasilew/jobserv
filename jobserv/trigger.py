@@ -76,7 +76,7 @@ def trigger_build(project, reason, trigger_name, params, secrets, proj_def):
         b.reason = reason
         storage = Storage()
         storage.create_project_definition(
-            b, yaml.dump(proj_def, default_flow_style=False))
+            b, yaml.dump(proj_def._data, default_flow_style=False))
         trigger = proj_def.get_trigger(trigger_name)
         if not trigger:
             raise KeyError('Project(%s) does not have a trigger: %s' % (

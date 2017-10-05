@@ -220,4 +220,5 @@ class ProjectDefinition(object):
                             msg, path=path + '/runs/' + run['name'])
         clazz._test_recursive_triggers(data)
         inst = clazz(data)
-        return inst._expand_run_loops()
+        inst._expand_run_loops()
+        return inst
