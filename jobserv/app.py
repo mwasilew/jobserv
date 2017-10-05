@@ -61,7 +61,7 @@ def project_create(name):
 def _register_gitlab_hook(project, url, api_token, hook_token, server_name):
     data = {
         'url': 'https://%s/gitlab/%s/' % (server_name, project),
-        'merge_request_events': True,
+        'merge_requests_events': True,
         'note_events': True,
         'enable_ssl_verification': True,
         'token': hook_token,
@@ -100,19 +100,8 @@ def _register_github_hook(project, url, api_token, hook_token, server_name):
             resp.status_code, resp.text))
 
 
-@project.command('add-trigger')
-@click.argument('project')
-@click.option('--user', '-u', required=True)
-@click.option('--type', '-t', required=True,
-              type=click.Choice([x.name for x in TriggerTypes]))
-@click.option('--secret', '-s', 'secrets', multiple=True)
-@click.option('--definition_repo', '-r', default=None)
-@click.option('--definition_file', '-f', default=None)
-@click.option('--hook_url', default=None)
-@click.option('--server_name', default=None)
-def project_add_trigger(project, user, type, secrets=None,
-                        definition_repo=None, definition_file=None,
-                        hook_url=None, server_name=None):
+def add_trigger(project, user, type, secrets, definition_repo, definition_file,
+                hook_url, server_name):
     key = ''.join(random.SystemRandom().choice(
         string.ascii_lowercase + string.ascii_uppercase + string.digits)
             for _ in range(32))
@@ -142,6 +131,23 @@ def project_add_trigger(project, user, type, secrets=None,
             project, hook_url, secret_map['githubtok'], key, server_name)
 
     db.session.commit()
+
+
+@project.command('add-trigger')
+@click.argument('project')
+@click.option('--user', '-u', required=True)
+@click.option('--type', '-t', required=True,
+              type=click.Choice([x.name for x in TriggerTypes]))
+@click.option('--secret', '-s', 'secrets', multiple=True)
+@click.option('--definition_repo', '-r', default=None)
+@click.option('--definition_file', '-f', default=None)
+@click.option('--hook_url', default=None)
+@click.option('--server_name', default=None)
+def project_add_trigger(project, user, type, secrets=None,
+                        definition_repo=None, definition_file=None,
+                        hook_url=None, server_name=None):
+    add_trigger(project, user, type, secrets, definition_repo,
+                definition_file, hook_url, server_name)
 
 
 @app.cli.group()
