@@ -70,7 +70,7 @@ def _update_status(test, status, msg, results=None):
             if status == 'PASSED':
                 data['state'] = 'success'
             elif status == 'FAILED':
-                data['state'] = 'failure'
+                data['state'] = 'failed'
             resp = requests.post(url, json=data, headers=headers)
             if resp.status_code not in (200, 201):
                 log.error(

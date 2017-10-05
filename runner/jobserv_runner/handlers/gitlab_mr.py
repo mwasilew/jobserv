@@ -9,7 +9,7 @@ from jobserv_runner.jobserv import JobServApi, _post
 STATUS_MAP = {
     'RUNNING': 'running',
     'PASSED': 'success',
-    'FAILED': 'failure',
+    'FAILED': 'failed',
 }
 
 
