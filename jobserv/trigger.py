@@ -70,13 +70,13 @@ def _fail_unexpected(build, exception):
 
 
 def trigger_build(project, reason, trigger_name, params, secrets, proj_def):
+    proj_def = ProjectDefinition.validate_data(proj_def)
     b = Build.create(project)
     try:
         b.reason = reason
         storage = Storage()
         storage.create_project_definition(
             b, yaml.dump(proj_def, default_flow_style=False))
-        proj_def = ProjectDefinition(proj_def)
         trigger = proj_def.get_trigger(trigger_name)
         if not trigger:
             raise KeyError('Project(%s) does not have a trigger: %s' % (
