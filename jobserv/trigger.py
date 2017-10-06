@@ -73,7 +73,8 @@ def trigger_build(project, reason, trigger_name, params, secrets, proj_def):
     proj_def = ProjectDefinition.validate_data(proj_def)
     b = Build.create(project)
     try:
-        b.reason = reason
+        if reason:
+            b.reason = reason
         storage = Storage()
         storage.create_project_definition(
             b, yaml.dump(proj_def._data, default_flow_style=False))
