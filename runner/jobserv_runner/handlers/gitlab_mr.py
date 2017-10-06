@@ -1,10 +1,10 @@
 # Copyright (C) 2017 Linaro Limited
 # Author: Andy Doan <andy.doan@linaro.org>
 
-import json
+import requests
 
 from jobserv_runner.handlers.git_poller import GitPoller, HandlerError
-from jobserv_runner.jobserv import JobServApi, _post
+from jobserv_runner.jobserv import JobServApi
 
 STATUS_MAP = {
     'RUNNING': 'running',
@@ -34,8 +34,17 @@ class StatusApi(JobServApi):
         state = STATUS_MAP.get(status)
         if state and self.data.get('state') != state:
             self.data['state'] = state
-            data = json.dumps(self.data).encode()
-            _post(self.status_url, data, self.headers, raise_error=True)
+            r = requests.post(
+                self.status_url, headers=self.headers, json=self.data)
+            if r.status_code != 201:
+                # gitlab won't let you update a status in "running" to
+                # "running". This can happen when someone hits "ci-retest"
+                # on a run that got into a weird state
+                ign = 'Cannot transition status via :run from :running'
+                if r.status_code != 400 or status != 'RUNNING' \
+                        or ign not in r.text:
+                    super().update_run(
+                        'ERROR: Unable to update GitLab status to %s' % status)
         return rv
 
 
