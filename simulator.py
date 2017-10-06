@@ -235,12 +235,13 @@ def get_args(args=None):
         actual JobServ.''')
     cmds = parser.add_subparsers(title='Commands')
 
+    api_url = 'https://api.opensourcefoundries.com/'
+
     p = cmds.add_parser('validate-schema',
                         help='''Validate a project definition YAML file against
                              a running JobServ''')
     p.set_defaults(func=_validate)
-    p.add_argument('--jobserv', '-j',
-                   default='https://api.linarotechnologies.org/',
+    p.add_argument('--jobserv', '-j', default=api_url,
                    help='The JobServ to query. Default=%(default)s')
     p.add_argument('--proj-def', '-d', required=True,
                    type=argparse.FileType('r'),
@@ -249,8 +250,7 @@ def get_args(args=None):
     p = cmds.add_parser('create',
                         help='Create a workspace for executing simulated run.')
     p.set_defaults(func=_create)
-    p.add_argument('--jobserv', '-j',
-                   default='https://api.opensourcefoundries.com/',
+    p.add_argument('--jobserv', '-j', default=api_url,
                    help='The JobServ to query. Default=%(default)s')
     p.add_argument('--proj-def', '-d', required=True,
                    type=argparse.FileType('r'),
@@ -288,8 +288,7 @@ def get_args(args=None):
     p = cmds.add_parser('check-for-updates',
                         help='Check for updates to this simulator script')
     p.set_defaults(func=_check_for_updates)
-    p.add_argument('--jobserv', '-j',
-                   default='https://api.opensourcefoundries.com/',
+    p.add_argument('--jobserv', '-j', default=api_url,
                    help='The JobServ to query. Default=%(default)s')
 
     args = parser.parse_args(args)
