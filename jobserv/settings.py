@@ -32,6 +32,11 @@ RUN_URL_FMT = os.environ.get('RUN_URL_FMT')
 # BUILD_URL_FMT = 'https://example.com/{project}/{build}
 # RUN_URL_FMT = 'https://example.com/{project}/{build}/{run}
 
+# Allows a custom rule for project names.
+# Eg - projects could be defined as user/projname with:
+#   PROJECT_NAME_REGEX = '(?:\S+\/\S+^/)'
+PROJECT_NAME_REGEX = os.environ.get('PROJECT_NAME_REGEX')
+
 SMTP_SERVER = os.environ.get('SMTP_SERVER', 'smtp.gmail.com')
 SMTP_USER = os.environ.get('SMTP_USER')
 SMTP_PASSWORD = os.environ.get('SMTP_PASSWORD')

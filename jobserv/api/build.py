@@ -12,7 +12,7 @@ from jobserv.models import Build, BuildStatus, Project, db
 from jobserv.trigger import trigger_build
 
 blueprint = Blueprint(
-    'api_build', __name__, url_prefix='/projects/<proj>')
+    'api_build', __name__, url_prefix='/projects/<project:proj>')
 
 
 @blueprint.route('/builds/', methods=('GET',))

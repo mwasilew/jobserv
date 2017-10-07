@@ -154,7 +154,7 @@ def _filter_events(event):
         raise ApiError(400, 'Invalid action: ' + event)
 
 
-@blueprint.route('/<proj>/', methods=('POST',))
+@blueprint.route('/<project:proj>/', methods=('POST',))
 def on_webhook(proj):
     trigger = get_or_404(ProjectTrigger.query.filter(
         ProjectTrigger.type == TriggerTypes.gitlab_mr.value
