@@ -13,7 +13,6 @@ COPY ./ $APPDIR/
 RUN apk --no-cache add python3 py3-pip mysql-client && \
 	pip3 install --upgrade pip setuptools && \
 	pip3 install -r $APPDIR/requirements.txt && \
-	# Build the runner egg \
 	cd $APPDIR/runner && python3 ./setup.py bdist_wheel
 
 WORKDIR $APPDIR
