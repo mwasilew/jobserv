@@ -235,7 +235,7 @@ def get_args(args=None):
         actual JobServ.''')
     cmds = parser.add_subparsers(title='Commands')
 
-    api_url = 'https://api.opensourcefoundries.com/'
+    api_url = 'https://api.foundries.io/'
 
     p = cmds.add_parser('validate-schema',
                         help='''Validate a project definition YAML file against
