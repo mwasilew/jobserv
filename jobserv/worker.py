@@ -24,7 +24,11 @@ def _check_worker(w):
         now = time.time()
         st = os.stat(pings_log)
         diff = now - st.st_mtime
-        if diff > 80 and w.online:
+        threshold = 80
+        if w.surges_only:
+            # surge workers check in every 90s so let them miss 3 check-ins
+            threshold = 120
+        if diff > threshold and w.online:
             # the worker checks in every 20s. This means its missed 4 check-ins
             log.info('marking %s offline %ds without a check-in', w.name, diff)
             w.online = False
