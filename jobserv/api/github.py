@@ -144,7 +144,7 @@ def _filter_events(event):
         raise ApiError(200, 'OK, ignoring')
 
 
-@blueprint.route('/<proj>/', methods=('POST',))
+@blueprint.route('/<project:proj>/', methods=('POST',))
 def on_webhook(proj):
     trigger = get_or_404(ProjectTrigger.query.filter(
         ProjectTrigger.type == TriggerTypes.github_pr.value

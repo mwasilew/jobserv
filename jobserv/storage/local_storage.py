@@ -85,8 +85,9 @@ def _get_run(proj, build_id, run):
     ).first_or_404()
 
 
-@blueprint.route('/<sig>/<proj>/builds/<int:build_id>/runs/<run>/<path:path>',
-                 methods=('PUT',))
+@blueprint.route(
+    '/<sig>/<project:proj>/builds/<int:build_id>/runs/<run>/<path:path>',
+    methods=('PUT',))
 def run_upload_artifact(sig, proj, build_id, run, path):
     run = _get_run(proj, build_id, run)
 

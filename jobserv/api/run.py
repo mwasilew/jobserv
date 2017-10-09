@@ -17,8 +17,8 @@ from jobserv.project import ProjectDefinition
 from jobserv.sendmail import notify_build_complete
 from jobserv.trigger import trigger_runs
 
-blueprint = Blueprint('api_run', __name__,
-                      url_prefix='/projects/<proj>/builds/<int:build_id>/runs')
+prefix = '/projects/<project:proj>/builds/<int:build_id>/runs'
+blueprint = Blueprint('api_run', __name__, url_prefix=prefix)
 
 
 @blueprint.route('/', methods=('GET',))

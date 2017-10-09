@@ -8,9 +8,8 @@ from jobserv.jsend import jsendify
 from jobserv.models import BuildStatus, Run, Test, TestResult, db
 from jobserv.storage import Storage
 
-blueprint = Blueprint(
-    'api_test', __name__,
-    url_prefix='/projects/<proj>/builds/<int:build_id>/runs/<run>/tests')
+prefix = '/projects/<project:proj>/builds/<int:build_id>/runs/<run>/tests'
+blueprint = Blueprint('api_test', __name__, url_prefix=prefix)
 
 
 @blueprint.route('/', methods=('GET',))

@@ -14,7 +14,7 @@ def project_list():
     return paginate('projects', Project.query)
 
 
-@blueprint.route('/<proj>/', methods=('GET',))
+@blueprint.route('/<project:proj>/', methods=('GET',))
 def project_get(proj):
     p = get_or_404(Project.query.filter_by(name=proj))
     return jsendify({'project': p.as_json(detailed=True)})
