@@ -38,7 +38,7 @@ log = logging.getLogger('jobserv-worker')
 logging.getLogger('requests').setLevel(logging.WARNING)
 
 
-def _create_conf(server_url, hostname, concurrent_runs, host_tags):
+def _create_conf(server_url, hostname, concurrent_runs, host_tags, surges):
     with open(script, 'rb') as f:
         h = hashlib.md5()
         h.update(f.read())
@@ -50,6 +50,7 @@ def _create_conf(server_url, hostname, concurrent_runs, host_tags):
     config['jobserv']['log_level'] = 'INFO'
     config['jobserv']['concurrent_runs'] = str(concurrent_runs)
     config['jobserv']['host_tags'] = host_tags
+    config['jobserv']['surges_only'] = str(int(surges))
     chars = string.ascii_letters + string.digits + '!@#$^&*~'
     config['jobserv']['host_api_key'] =\
         ''.join(random.choice(chars) for _ in range(32))
@@ -66,6 +67,7 @@ class HostProps(object):
 
     def __init__(self):
         mem = os.sysconf('SC_PAGE_SIZE') * os.sysconf('SC_PHYS_PAGES')
+        surges = int(config.get('jobserv', 'surges_only', fallback='0'))
         self.data = {
             'cpu_total': cpu_count(),
             'cpu_type': platform.processor(),
@@ -75,6 +77,7 @@ class HostProps(object):
             'name': config['jobserv']['hostname'],
             'concurrent_runs': int(config['jobserv']['concurrent_runs']),
             'host_tags': config['jobserv']['host_tags'],
+            'surges_only': surges != 0,
         }
 
     def _get_distro(self):
@@ -219,8 +222,8 @@ class JobServ(object):
 
 def cmd_register(args):
     '''Register this host with the configured JobServ server'''
-    _create_conf(
-        args.server_url, args.hostname, args.concurrent_runs, args.host_tags)
+    _create_conf(args.server_url, args.hostname, args.concurrent_runs,
+                 args.host_tags, args.surges_only)
     p = HostProps()
     args.server.create_host(p.data)
     p.cache()
@@ -382,6 +385,9 @@ def get_args(args=None):
                         value of /etc/hostname will be used.''')
     p.add_argument('--concurrent-runs', type=int, default=1,
                    help='Maximum number of current runs. Default=%(default)d')
+    p.add_argument('--surges-only', action='store_true',
+                   help='''Only use this worker when a surge of Runs has been
+                        has been queued on the server''')
     p.add_argument('server_url')
     p.add_argument('host_tags', help='Comma separated list')
 
@@ -393,7 +399,10 @@ def get_args(args=None):
 
     p = sub.add_parser('loop', help='Run the "check" command in a loop')
     p.set_defaults(func=cmd_loop)
-    p.add_argument('--every', type=int, default=20, metavar='interval',
+    interval = 20
+    if int(config.get('jobserv', 'surges_only', fallback='0')):
+        interval = 90
+    p.add_argument('--every', type=int, default=interval, metavar='interval',
                    help='Seconds to sleep between runs. default=%(default)d')
     p.add_argument('--docker-rm', type=int, default=8, metavar='interval',
                    help='''Interval in hours to run to run "dock rm" on
