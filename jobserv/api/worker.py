@@ -81,8 +81,8 @@ def worker_get(name):
         if w.enlisted:
             w.ping(**request.args)
 
-        avail = int(request.args.get('available_runners', '0'))
-        if avail > 0 and w.enlisted:
+        runners = int(request.args.get('available_runners', '0'))
+        if runners > 0 and w.available:
             r = Run.pop_queued(w)
             if r:
                 try:
@@ -112,10 +112,11 @@ def worker_create(name):
     if missing:
         raise ApiError(400, 'Missing required field(s): ' + ', '.join(missing))
 
-    db.session.add(
-        Worker(name, worker['distro'], worker['mem_total'],
+    w = Worker(name, worker['distro'], worker['mem_total'],
                worker['cpu_total'], worker['cpu_type'], worker['api_key'],
-               worker['concurrent_runs'], worker['host_tags']))
+               worker['concurrent_runs'], worker['host_tags'])
+    w.surges_only = worker.get('surges_only', False)
+    db.session.add(w)
     db.session.commit()
     return jsendify({}, 201)
 

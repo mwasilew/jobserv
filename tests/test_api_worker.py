@@ -126,6 +126,17 @@ class WorkerAPITest(JobServTest):
         data = json.loads(resp.data.decode())
         self.assertNotIn('run-defs', data['data']['worker'])
 
+        # now mark it only for surges
+        w.surges_only = True
+        r.status = BuildStatus.QUEUED
+        r.host_tag = 'aarch96'
+        db.session.commit()
+        resp = self.client.get(
+            '/workers/w1/', headers=headers, query_string=qs)
+        self.assertEqual(200, resp.status_code)
+        data = json.loads(resp.data.decode())
+        self.assertNotIn('run-defs', data['data']['worker'])
+
     def test_worker_create_bad(self):
         data = {
         }

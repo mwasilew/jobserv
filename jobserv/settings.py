@@ -23,6 +23,12 @@ GCE_BUCKET = os.environ.get('GCE_BUCKET')
 STORAGE_BACKEND = os.environ.get(
     'STORAGE_BACKEND', 'jobserv.storage.gce_storage')
 
+# The SURGE_SUPPORT_RATIO is defined as the number of Runs in QUEUED divided
+# by the number of online and enlisted non-surge workers. If this ratio is
+# exceeded, the JobServ will enter surge support mode and use surge workers
+# for QUEUED run.
+SURGE_SUPPORT_RATIO = int(os.environ.get('SURGE_SUPPORT_RATIO', '4'))
+
 INTERNAL_API_KEY = os.environ.get('INTERNAL_API_KEY', '').encode()
 
 # Allow this to be deployed in a way that builds and runs can provide links
