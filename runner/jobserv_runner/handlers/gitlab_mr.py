@@ -43,8 +43,8 @@ class StatusApi(JobServApi):
                 ign = 'Cannot transition status via :run from :running'
                 if r.status_code != 400 or status != 'RUNNING' \
                         or ign not in r.text:
-                    super().update_run(
-                        'ERROR: Unable to update GitLab status to %s' % status)
+                    m = 'ERROR: Unable to update GitLab status to %s' % status
+                    super().update_run(m.encode())
         return rv
 
 
