@@ -5,8 +5,11 @@ import logging
 import os
 import time
 
-from jobserv.models import db, BuildStatus, Run, Worker
+from jobserv.models import db, BuildStatus, Run, Worker, WORKER_DIR
+from jobserv.settings import SURGE_SUPPORT_RATIO
 from jobserv.stats import CarbonClient
+
+SURGE_FILE = os.path.join(WORKER_DIR, 'enable_surge')
 
 logging.basicConfig(
     level='INFO', format='%(asctime)s %(levelname)s: %(message)s')
@@ -57,6 +60,21 @@ def _check_workers():
 
 def _check_queue():
     queued_runs = Run.query.filter(Run.status == BuildStatus.QUEUED).count()
+    num_workers = Worker.query.filter(
+        Worker.enlisted == True,  # NOQA (flake8 doesn't like == True)
+        Worker.online == True,
+        Worker.surges_only == False
+    ).count()
+    if num_workers > 0:
+        ratio = queued_runs / num_workers
+        if ratio >= SURGE_SUPPORT_RATIO:
+            log.info('Entering surge support mode: ratio = %f', ratio)
+            with open(SURGE_FILE, 'w') as f:
+                f.write('%f\n' % ratio)
+        else:
+            if os.path.exists(SURGE_FILE):
+                log.info('Exiting surge support mode: ratio = %f', ratio)
+                os.unlink(SURGE_FILE)
     with CarbonClient() as c:
         c.send('queued_runs', queued_runs)
 
