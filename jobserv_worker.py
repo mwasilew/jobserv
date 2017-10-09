@@ -380,7 +380,7 @@ def get_args(args=None):
     p.add_argument('--hostname',
                    help='''Worker name to register. If none is provided, the
                         value of /etc/hostname will be used.''')
-    p.add_argument('--concurrent-runs', type=int, default=2,
+    p.add_argument('--concurrent-runs', type=int, default=1,
                    help='Maximum number of current runs. Default=%(default)d')
     p.add_argument('server_url')
     p.add_argument('host_tags', help='Comma separated list')
