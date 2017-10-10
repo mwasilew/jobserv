@@ -124,9 +124,6 @@ def _get_refs(repo_url, proj):
 
 
 def _get_repo_changes(refs_cache, url, refs, proj):
-    # TODO the cache is just repo urls. If we have 2 different CI projects
-    # pointing to the same URL this will fail. So the cache lookup key should
-    # project-name + url not just url
     log.info('Looking for changes to: %s', url)
     cur_refs = refs_cache.setdefault(url, {})
     for sha, ref in _get_refs(url, proj):
@@ -240,8 +237,9 @@ def _poll():
         for name, proj in _projects.items():
             log.debug('Checking project: %s', name)
             projdef = _get_projdef(name, proj)
+            proj_refs = refs_cache.setdefault(name, {})
             if projdef:
-                _poll_project(refs_cache, name, proj, projdef)
+                _poll_project(proj_refs, name, proj, projdef)
 
 
 def run():
