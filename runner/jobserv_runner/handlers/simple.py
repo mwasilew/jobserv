@@ -5,6 +5,7 @@ import io
 import os
 import signal
 import subprocess
+import time
 import traceback
 import urllib.parse
 import uuid
@@ -82,8 +83,13 @@ class SimpleHandler(object):
     def docker_pull(self):
         container = self.rundef['container']
         with self.log_context('Pulling container: ' + container) as log:
-            if not log.exec(['docker', 'pull', container]):
-                raise HandlerError('Unable to pull container: ' + container)
+            for x in (0, 2, 4):  # try three times with these back-off vals
+                if x:
+                    log.warn('Unable to pull container, retrying in %ds', x)
+                    time.sleep(x)
+                if log.exec(['docker', 'pull', container]):
+                    return
+            raise HandlerError('Unable to pull container: ' + container)
 
     def docker_run(self, mounts):
         env_file = os.path.join(self.run_dir, 'docker-env')
