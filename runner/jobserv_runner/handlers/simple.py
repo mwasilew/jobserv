@@ -83,7 +83,7 @@ class SimpleHandler(object):
         container = self.rundef['container']
         with self.log_context('Pulling container: ' + container) as log:
             if not log.exec(['docker', 'pull', container]):
-                raise HandlerError('Unable pull container')
+                raise HandlerError('Unable to pull container: ' + container)
 
     def docker_run(self, mounts):
         env_file = os.path.join(self.run_dir, 'docker-env')
