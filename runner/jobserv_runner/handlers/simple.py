@@ -150,6 +150,7 @@ class SimpleHandler(object):
            This is handy for Android repo style builds that exist in a private
            repository. By setting this in .netrc everything just works.
         """
+        rv = None
         # NOTE: Curl (used by git) doesn't look at the $NETRC environment
         # for overriding the .netrc location. We have to assume the
         # container's $HOME is /root
@@ -161,7 +162,7 @@ class SimpleHandler(object):
                 with open(netrc, 'w') as f:
                     f.write('machine github.com\n')
                     f.write('login %s\n' % token)
-                return netrc, '/root/.netrc'
+                rv = netrc, '/root/.netrc'
 
         # we have to guess at a gitlab "machine" name
         url = (self.rundef.get('script-repo') or {}).get('clone-url')
@@ -171,10 +172,11 @@ class SimpleHandler(object):
                 log.info('Creating a gitlab token entry')
                 user = self.rundef['secrets']['gitlabuser']
                 netrc = os.path.join(self.run_dir, '.netrc')
-                with open(netrc, 'w') as f:
+                with open(netrc, 'a') as f:
                     f.write('machine %s\n' % urllib.parse.urlparse(url).netloc)
                     f.write('login %s\npassword %s\n' % (user, token))
-                return netrc, '/root/.netrc'
+                rv = netrc, '/root/.netrc'
+        return rv
 
     def _clone_script_repo(self, log, repo, dst):
         url = repo['clone-url']
