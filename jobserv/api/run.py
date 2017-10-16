@@ -195,7 +195,7 @@ def run_update(proj, build_id, run):
                 if _failed_tests(storage, r):
                     status = BuildStatus.FAILED
                 storage.copy_log(r)
-            with r.build.locked(r):
+            with r.build.locked():
                 r.set_status(status)
                 if r.complete:
                     _handle_triggers(storage, r)

@@ -5,9 +5,10 @@ import json
 import shutil
 import tempfile
 
-import jobserv.storage.base
-
 from unittest.mock import patch
+
+import jobserv.models
+import jobserv.storage.base
 
 from jobserv.models import (
     Build, BuildStatus, Project, Run, Test, TestResult, db)
@@ -30,6 +31,7 @@ class TestAPITest(JobServTest):
         self.urlbase = '/projects/proj-1/builds/1/runs/run0/tests/'
 
         jobserv.storage.base.JOBS_DIR = tempfile.mkdtemp()
+        jobserv.models.JOBS_DIR = jobserv.storage.base.JOBS_DIR
         self.addCleanup(shutil.rmtree, jobserv.storage.base.JOBS_DIR)
 
     def _post(self, url, data, headers, status=200):
@@ -71,6 +73,42 @@ class TestAPITest(JobServTest):
             ('Authorization', 'Token ' + self.test.run.api_key),
         ]
         url = self.urlbase + 'test1/'
+        resp = self.client.put(
+            url, data=json.dumps({'msg': 'blah blah'}), headers=headers)
+        self.assertEqual(200, resp.status_code)
+
+        resp = self.client.put(
+            url, data=json.dumps({'status': 'FAILED'}), headers=headers)
+        self.assertEqual(200, resp.status_code)
+        self.assertTrue(resp.json['data']['complete'])
+        db.session.refresh(self.test)
+        self.assertEqual('FAILED', self.test.status.name)
+        self.assertEqual('FAILED', self.test.run.status.name)
+
+    @patch('jobserv.api.test.Storage')
+    def test_test_update_multiple(self, storage):
+        test2 = Test(self.test.run, 'test2', 'test2-ctx')
+        db.session.add(test2)
+        db.session.commit()
+
+        headers = [
+            ('Content-type', 'application/json'),
+            ('Authorization', 'Token ' + self.test.run.api_key),
+        ]
+        url = self.urlbase + 'test1/'
+        resp = self.client.put(
+            url, data=json.dumps({'msg': 'blah blah'}), headers=headers)
+        self.assertEqual(200, resp.status_code)
+
+        resp = self.client.put(
+            url, data=json.dumps({'status': 'FAILED'}), headers=headers)
+        self.assertEqual(200, resp.status_code)
+        self.assertFalse(resp.json['data']['complete'])
+        db.session.refresh(self.test)
+        self.assertEqual('FAILED', self.test.status.name)
+        self.assertEqual('RUNNING_WITH_FAILURES', self.test.run.status.name)
+
+        url = self.urlbase + 'test2/'
         resp = self.client.put(
             url, data=json.dumps({'msg': 'blah blah'}), headers=headers)
         self.assertEqual(200, resp.status_code)
