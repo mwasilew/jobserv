@@ -99,9 +99,9 @@ def _handle_triggers(storage, run):
                 if run.status == BuildStatus.PASSED:
                     _create_triggers(projdef, storage, run.build, params,
                                      secrets, rt.get('triggers', []))
-                if run.build.complete:
-                    _handle_build_complete(projdef, storage, run.build, params,
-                                           secrets, run_trigger)
+        if run.build.complete:
+            _handle_build_complete(projdef, storage, run.build, params,
+                                   secrets, run_trigger)
     except ValueError as e:
         current_app.logger.exception(
             'Caught integrity error and failed run: %d', run.id)
