@@ -10,6 +10,7 @@ import jobserv.models
 import jobserv.worker
 
 from jobserv.models import db, Build, Project, Run, Worker
+from jobserv.settings import SURGE_SUPPORT_RATIO
 from jobserv.worker import _check_queue, _check_workers
 
 from tests import JobServTest
@@ -22,7 +23,7 @@ class TestWorkerMonitor(JobServTest):
         jobserv.worker.SURGE_FILE = os.path.join(
             jobserv.models.WORKER_DIR, 'enable_surges')
         self.addCleanup(shutil.rmtree, jobserv.models.WORKER_DIR)
-        self.worker = Worker('w1', 'd', 1, 1, 'amd64', 'k', 1, 'tags')
+        self.worker = Worker('w1', 'd', 1, 1, 'amd64', 'k', 1, 'amd64')
         self.worker.enlisted = True
         self.worker.online = True
         db.session.add(self.worker)
@@ -56,18 +57,58 @@ class TestWorkerMonitor(JobServTest):
         db.session.refresh(self.worker)
         self.assertTrue(self.worker.online)
 
-    def test_surge_mode(self):
+    def test_surge_simple(self):
         self.create_projects('proj1')
         b = Build.create(Project.query.all()[0])
-        db.session.add(Run(b, 'run1'))
-        db.session.add(Run(b, 'run2'))
-        db.session.add(Run(b, 'run3'))
-        db.session.add(Run(b, 'run4'))
+        for x in range(SURGE_SUPPORT_RATIO + 1):
+            r = Run(b, 'run%d' % x)
+            r.host_tag = 'amd64'
+            db.session.add(r)
         db.session.commit()
         _check_queue()
-        self.assertTrue(os.path.exists(jobserv.worker.SURGE_FILE))
+        self.assertTrue(os.path.exists(jobserv.worker.SURGE_FILE + '-amd64'))
 
         db.session.delete(Run.query.all()[0])
         db.session.commit()
         _check_queue()
-        self.assertFalse(os.path.exists(jobserv.worker.SURGE_FILE))
+        self.assertFalse(os.path.exists(jobserv.worker.SURGE_FILE + '-amd64'))
+
+    def test_surge_complex(self):
+        # we'll have two amd64 workers and one armhf
+        worker = Worker('w2', 'd', 1, 1, 'amd64', 'k', 1, 'amd64')
+        worker.enlisted = True
+        worker.online = True
+        db.session.add(worker)
+        worker = Worker('w3', 'd', 1, 1, 'armhf', 'k', 1, 'armhf')
+        worker.enlisted = True
+        worker.online = True
+        db.session.add(worker)
+        db.session.commit()
+
+        self.create_projects('proj1')
+        b = Build.create(Project.query.all()[0])
+        for x in range(SURGE_SUPPORT_RATIO + 1):
+            r = Run(b, 'amd%d' % x)
+            r.host_tag = 'amd64'
+            db.session.add(r)
+            r = Run(b, 'armhf%d' % x)
+            r.host_tag = 'armhf'
+            db.session.add(r)
+
+        db.session.commit()
+        _check_queue()
+        self.assertFalse(os.path.exists(jobserv.worker.SURGE_FILE + '-amd64'))
+        self.assertTrue(os.path.exists(jobserv.worker.SURGE_FILE + '-armhf'))
+
+        # get us under surge for armhf
+        db.session.delete(Run.query.filter(Run.host_tag == 'armhf').first())
+        # and over surge for amd64
+        for x in range(SURGE_SUPPORT_RATIO + 1):
+            r = Run(b, 'run%d' % x)
+            r.host_tag = 'amd64'
+            db.session.add(r)
+
+        db.session.commit()
+        _check_queue()
+        self.assertTrue(os.path.exists(jobserv.worker.SURGE_FILE + '-amd64'))
+        self.assertFalse(os.path.exists(jobserv.worker.SURGE_FILE + '-armhf'))
