@@ -41,6 +41,10 @@ class ProjectDefinition(object):
     def params(self):
         return self._data.get('params', {})
 
+    @property
+    def project_email(self):
+        return self._data.get('email', None)
+
     def _expand_run_loops(self):
         for trigger in self.triggers:
             for run in trigger['runs']:

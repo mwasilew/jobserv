@@ -60,7 +60,7 @@ def _create_triggers(projdef, storage, build, params, secrets, triggers):
 
 
 def _handle_build_complete(projdef, storage, build, params, secrets, trigger):
-    email = trigger.get('email')
+    email = trigger.get('email', projdef.project_email)
     if email:
         if build.status == BuildStatus.FAILED \
                 or not email.get('only_failures'):

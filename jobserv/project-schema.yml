@@ -34,6 +34,17 @@ mapping:
   timeout:
     type: int
     required: True
+  email:
+    required: False
+    type: map
+    mapping:
+      users:
+        type: str
+        required: True
+      only_failures:
+        type: bool
+        required: False
+
   triggers:
     type: seq
     sequence:
