@@ -9,6 +9,7 @@ import tempfile
 
 from unittest.mock import Mock, patch
 
+import jobserv.models
 import jobserv.storage.base
 
 from jobserv.storage import Storage
@@ -27,6 +28,7 @@ class RunAPITest(JobServTest):
         self.urlbase = '/projects/proj-1/builds/1/runs/'
 
         jobserv.storage.base.JOBS_DIR = tempfile.mkdtemp()
+        jobserv.models.JOBS_DIR = jobserv.storage.base.JOBS_DIR
         self.addCleanup(shutil.rmtree, jobserv.storage.base.JOBS_DIR)
 
     def test_no_runs(self):
@@ -99,10 +101,8 @@ class RunAPITest(JobServTest):
         headers = [('Authorization', 'Token badtoken')]
         self._post(self.urlbase + 'run0/', 'message', headers, 401)
 
-    # sqlite doesn't support with_for_update, so disable it by mocking "locked"
-    @patch('jobserv.models.Build.locked')
     @patch('jobserv.storage.gce_storage.storage')
-    def test_run_stream(self, storage, locked):
+    def test_run_stream(self, storage):
         r = Run(self.build, 'run0')
         db.session.add(r)
         db.session.commit()
@@ -461,10 +461,8 @@ class RunAPITest(JobServTest):
         db.session.refresh(r)
         self.assertEqual(self.build, build_complete.call_args_list[0][0][0])
 
-    # sqlite doesn't support with_for_update, so disable it by mocking "locked"
-    @patch('jobserv.models.Build.locked')
     @patch('jobserv.api.run.Storage')
-    def test_build_complete_triggers(self, storage, locked):
+    def test_build_complete_triggers(self, storage):
         m = Mock()
         m.get_project_definition.return_value = json.dumps({
             'timeout': 5,

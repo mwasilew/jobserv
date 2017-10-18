@@ -69,11 +69,13 @@ def test_update(proj, build_id, run, test):
             db.session.commit()
         if status:
             run_status = t.set_status(status)
+            db.session.commit()
             if run_status in (BuildStatus.PASSED, BuildStatus.FAILED):
                 storage.copy_log(r)
-                _handle_triggers(storage, r)
             if run_status is not None:
-                t.run.set_status(run_status)
-            db.session.commit()
+                with r.build.locked():
+                    t.run.set_status(run_status)
+                    if r.complete:
+                        _handle_triggers(storage, r)
 
     return jsendify({'complete': t.run.complete})

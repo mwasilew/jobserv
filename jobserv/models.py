@@ -4,6 +4,7 @@
 import contextlib
 import datetime
 import enum
+import fcntl
 import json
 import logging
 import os
@@ -18,7 +19,7 @@ from flask_sqlalchemy import SQLAlchemy
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.hybrid import Comparator, hybrid_property
 
-from jobserv.settings import WORKER_DIR
+from jobserv.settings import JOBS_DIR, WORKER_DIR
 from jobserv.stats import CarbonClient
 
 db = SQLAlchemy()
@@ -170,6 +171,23 @@ class StatusMixin(object):
         return self._status in (
             BuildStatus.PASSED.value, BuildStatus.FAILED.value)
 
+    @contextlib.contextmanager
+    def locked(self):
+        '''Provide a distributed lock that can be used to provide sequential
+           updates to certain operations like Run and Test status.
+        '''
+        lockname = os.path.join(
+            JOBS_DIR, '%s-%d' % (self.__class__.__name__, self.id))
+        with open(lockname, 'a') as f:
+            fcntl.flock(f, fcntl.LOCK_EX)
+            # force a clean session so that updates from another thread will
+            # be pulled in
+            db.session.rollback()
+            yield
+            db.session.commit()
+        if self.complete:
+            os.unlink(lockname)
+
 
 class Build(db.Model, StatusMixin):
     __tablename__ = 'builds'
@@ -224,33 +242,10 @@ class Build(db.Model, StatusMixin):
         return data
 
     def refresh_status(self):
-        locked_run = getattr(self, '_locked_run', None)
-        if locked_run:
-            # A new session is required, or the thread won't see updates done
-            # from another thread. This is close related to Build.lock
-            # This is probably dumb, and a DB expert would have a less hackish
-            # approach, but its working.
-            hack = db.create_session({})
-            runs = [x for x in hack.query(Run).filter(Run.build_id == self.id)
-                    if x.name != locked_run.name]
-            runs.append(locked_run)
-            hack.close()
-        else:
-            runs = self.runs
-        status = get_cumulative_status(self, runs)
+        status = get_cumulative_status(self, self.runs)
         if self.status != status:
             self.status = status
             db.session.add(BuildEvents(self, status))
-
-    @contextlib.contextmanager
-    def locked(self, run):
-        # enables us to enforce sequential updates to the runs for a build.
-        # This helps ensure we "complete" a build only once. This is closely
-        # related to the hack session logic in Build.refresh_status
-        list(Run.query.filter(Run.build_id == self.id).with_for_update())
-        self._locked_run = run
-        yield
-        db.session.commit()
 
     def __repr__(self):
         return '<Build %d/%d: %s>' % (
@@ -375,10 +370,7 @@ class Run(db.Model, StatusMixin):
         if self.status != status:
             self.status = status
             db.session.flush()
-            db.session.refresh(self.build)
             self.build.refresh_status()
-            db.session.flush()
-
             db.session.add(RunEvents(self, status))
 
     def __repr__(self):
@@ -493,8 +485,6 @@ class Test(db.Model, StatusMixin):
             status = BuildStatus[status]
         if self.status != status:
             self.status = status
-            db.session.flush()
-            db.session.refresh(self.run)
             return get_cumulative_status(self.run, self.run.tests)
 
     @property
