@@ -6,6 +6,7 @@ import os
 import time
 
 from jobserv.models import db, BuildStatus, Run, Worker, WORKER_DIR
+from jobserv.sendmail import notify_surge_started, notify_surge_ended
 from jobserv.settings import SURGE_SUPPORT_RATIO
 from jobserv.stats import CarbonClient
 
@@ -116,7 +117,11 @@ def _check_queue():
         surge_file = SURGE_FILE + '-' + tag
         if tag not in surges:
             log.info('Exiting surge support for %s', tag)
-            os.unlink(SURGE_FILE + '-' + tag)
+            surge_file = SURGE_FILE + '-' + tag
+            with open(surge_file) as f:
+                msg_id = f.read().strip()
+                notify_surge_ended(tag, msg_id)
+            os.unlink(surge_file)
 
     # now check for new surges
     for tag, count in surges.items():
@@ -124,7 +129,8 @@ def _check_queue():
         if not os.path.exists(surge_file):
             log.info('Entering surge support for %s: count=%d', tag, count)
         with open(surge_file, 'w') as f:
-            f.write('%f\n' % count)
+            msgid = notify_surge_started(tag)
+            f.write(msgid)
 
 
 def run_monitor_workers():
