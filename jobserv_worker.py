@@ -324,6 +324,8 @@ def _docker_clean():
         containers = subprocess.check_output(
             ['docker', 'ps', '--filter', 'status=exited', '-q'])
         containers = containers.decode().splitlines()
+        if not containers:
+            return  # nothing to clean up
         cmd = ['docker', 'inspect', '--format', '{{.State.FinishedAt}}']
         times = subprocess.check_output(cmd + containers).decode().splitlines()
 
