@@ -6,6 +6,7 @@ import os
 import time
 
 from jobserv.models import db, BuildStatus, Run, Worker, WORKER_DIR
+from jobserv.sendmail import notify_surge_started, notify_surge_ended
 from jobserv.settings import SURGE_SUPPORT_RATIO
 from jobserv.stats import CarbonClient
 
@@ -63,24 +64,73 @@ def _check_workers():
 
 
 def _check_queue():
-    queued_runs = Run.query.filter(Run.status == BuildStatus.QUEUED).count()
-    num_workers = Worker.query.filter(
+    # find out queue by host_tags
+    queued = Run.query.filter(
+        Run.status == BuildStatus.QUEUED
+    ).order_by(
+        Run.id
+    )
+    queued = [[x.host_tag, True] for x in queued]
+    with CarbonClient() as c:
+        c.send('queued_runs', len(queued))
+
+    # now get a list of available slots for runs
+    workers = Worker.query.filter(
         Worker.enlisted == True,  # NOQA (flake8 doesn't like == True)
         Worker.online == True,
         Worker.surges_only == False
-    ).count()
-    if num_workers > 0:
-        ratio = queued_runs / num_workers
-        if ratio >= SURGE_SUPPORT_RATIO:
-            log.info('Entering surge support mode: ratio = %f', ratio)
-            with open(SURGE_FILE, 'w') as f:
-                f.write('%f\n' % ratio)
-        else:
-            if os.path.exists(SURGE_FILE):
-                log.info('Exiting surge support mode: ratio = %f', ratio)
-                os.unlink(SURGE_FILE)
-    with CarbonClient() as c:
-        c.send('queued_runs', queued_runs)
+    )
+    hosts = {}
+    for w in workers:
+        hosts[w.name] = {
+            'slots': SURGE_SUPPORT_RATIO,
+            'tags': [x.strip() for x in w.host_tags.split(',')],
+        }
+
+    # try and figure out runs/host in a round-robin fashion
+    matches_found = True
+    while matches_found:
+        matches_found = False
+        for name in list(hosts.keys()):
+            host = hosts[name]
+            if host['slots']:
+                for run in queued:
+                    # run = host_tag, not-claimed by a host
+                    # TODO support wildcard tag=arm%
+                    if run[1] and run[0] in host['tags']:
+                        matches_found = True
+                        run[1] = False  # claim it
+                        host['slots'] -= 1
+                        if host['slots'] == 0:
+                            del hosts[name]
+                        break  # move to the next host for round-robin
+    surges = {}
+    for tag, unclaimed in queued:
+        if unclaimed:
+            surges[tag] = surges.setdefault(tag, 0) + 1
+
+    # clean up old surges no longer in place
+    path, base = os.path.split(SURGE_FILE)
+    prev_surges = [x[len(base) + 1:] for x in os.listdir(path)
+                   if x.startswith(base)]
+    for tag in prev_surges:
+        surge_file = SURGE_FILE + '-' + tag
+        if tag not in surges:
+            log.info('Exiting surge support for %s', tag)
+            surge_file = SURGE_FILE + '-' + tag
+            with open(surge_file) as f:
+                msg_id = f.read().strip()
+                notify_surge_ended(tag, msg_id)
+            os.unlink(surge_file)
+
+    # now check for new surges
+    for tag, count in surges.items():
+        surge_file = SURGE_FILE + '-' + tag
+        if not os.path.exists(surge_file):
+            log.info('Entering surge support for %s: count=%d', tag, count)
+        with open(surge_file, 'w') as f:
+            msgid = notify_surge_started(tag)
+            f.write(msgid)
 
 
 def run_monitor_workers():

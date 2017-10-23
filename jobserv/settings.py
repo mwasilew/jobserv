@@ -23,11 +23,11 @@ GCE_BUCKET = os.environ.get('GCE_BUCKET')
 STORAGE_BACKEND = os.environ.get(
     'STORAGE_BACKEND', 'jobserv.storage.gce_storage')
 
-# The SURGE_SUPPORT_RATIO is defined as the number of Runs in QUEUED divided
-# by the number of online and enlisted non-surge workers. If this ratio is
-# exceeded, the JobServ will enter surge support mode and use surge workers
-# for QUEUED run.
-SURGE_SUPPORT_RATIO = int(os.environ.get('SURGE_SUPPORT_RATIO', '4'))
+# The SURGE_SUPPORT_RATIO is defined as the number of Runs in QUEUED for a
+# given host_tag divided by the number of online and enlisted non-surge
+# workers that can service that host_tag. If this ratio is exceeded, the
+# JobServ will enter surge support mode and use surge workers for QUEUED run.
+SURGE_SUPPORT_RATIO = int(os.environ.get('SURGE_SUPPORT_RATIO', '3'))
 
 INTERNAL_API_KEY = os.environ.get('INTERNAL_API_KEY', '').encode()
 
@@ -46,6 +46,9 @@ PROJECT_NAME_REGEX = os.environ.get('PROJECT_NAME_REGEX')
 SMTP_SERVER = os.environ.get('SMTP_SERVER', 'smtp.gmail.com')
 SMTP_USER = os.environ.get('SMTP_USER')
 SMTP_PASSWORD = os.environ.get('SMTP_PASSWORD')
+
+# Who to email when things go wrong
+NOTIFICATION_EMAILS = os.environ.get('NOTIFICATION_EMAILS')
 
 LAVA_URLBASE = os.environ.get(
     'LAVA_URLBASE', 'http://lava.linarotechnologies.org')

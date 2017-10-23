@@ -7,6 +7,7 @@ import smtplib
 import time
 
 from email.mime.text import MIMEText
+from email.utils import make_msgid
 
 from flask import url_for
 
@@ -14,6 +15,7 @@ from jobserv.jsend import ApiError
 from jobserv.models import Build, BuildStatus
 from jobserv.settings import (
     BUILD_URL_FMT,
+    NOTIFICATION_EMAILS,
     RUN_URL_FMT,
     SMTP_SERVER,
     SMTP_USER,
@@ -88,7 +90,7 @@ def _get_build_stats(build):
     return b_stats
 
 
-def _send(build, message):
+def _send(message):
     last_exc = None
     for x in range(3):
         with smtp_session() as s:
@@ -98,8 +100,8 @@ def _send(build, message):
             except Exception as e:
                 last_exc = e
                 time.sleep(1)
-    log.error('Unable to send build email for: %s %d: %r',
-              build.project.name, build.build_id, last_exc)
+    email = '|  ' + '\n|  '.join(str(message).splitlines())
+    log.error('Unable to send email:\n%s\n%r', email, last_exc)
 
 
 def notify_build_complete(build, to_list):
@@ -123,6 +125,28 @@ def notify_build_complete(build, to_list):
 
     msg = MIMEText(body)
     msg['Subject'] = subject
-    msg['From'] = 'Do Not Reply <donot-reply@linaro.org>'
+    msg['From'] = SMTP_USER
     msg['To'] = to_list
-    _send(build, msg)
+    _send(msg)
+
+
+def notify_surge_started(tag):
+    msg = MIMEText('Surge workers have been enabled for: ' + tag)
+    msg['Message-ID'] = make_msgid('jobserv-' + tag)
+    msg['From'] = SMTP_USER
+    msg['Subject'] = 'jobserv: SURGE!!! ' + tag
+
+    if NOTIFICATION_EMAILS:
+        msg['To'] = NOTIFICATION_EMAILS
+        _send(msg)
+    return msg['Message-ID']
+
+
+def notify_surge_ended(tag, in_reply_to):
+    if not NOTIFICATION_EMAILS:
+        return
+    msg = MIMEText('Surge workers have been disabled for: ' + tag)
+    msg['In-Reply-To'] = in_reply_to
+    msg['From'] = SMTP_USER
+    msg['Subject'] = 'jobserv: ended surge for ' + tag
+    _send(msg)
