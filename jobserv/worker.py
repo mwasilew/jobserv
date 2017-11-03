@@ -116,8 +116,13 @@ def _check_queue():
     for tag in prev_surges:
         surge_file = SURGE_FILE + '-' + tag
         if tag not in surges:
+            if time.time() - os.stat(surge_file).st_mtime > 300:
+                # surges can sort of "flap". ie - you get bunches of emails
+                # when its right on the threshold. This just keeps us inside
+                # a surge for at least 5 minutes to help make sure we don't
+                # "flap"
+                continue
             log.info('Exiting surge support for %s', tag)
-            surge_file = SURGE_FILE + '-' + tag
             with open(surge_file) as f:
                 msg_id = f.read().strip()
                 notify_surge_ended(tag, msg_id)
@@ -128,9 +133,9 @@ def _check_queue():
         surge_file = SURGE_FILE + '-' + tag
         if not os.path.exists(surge_file):
             log.info('Entering surge support for %s: count=%d', tag, count)
-        with open(surge_file, 'w') as f:
-            msgid = notify_surge_started(tag)
-            f.write(msgid)
+            with open(surge_file, 'w') as f:
+                msgid = notify_surge_started(tag)
+                f.write(msgid)
 
 
 def run_monitor_workers():

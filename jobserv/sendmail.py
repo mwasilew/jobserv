@@ -146,6 +146,7 @@ def notify_surge_ended(tag, in_reply_to):
     if not NOTIFICATION_EMAILS:
         return
     msg = MIMEText('Surge workers have been disabled for: ' + tag)
+    msg['To'] = NOTIFICATION_EMAILS
     msg['In-Reply-To'] = in_reply_to
     msg['From'] = SMTP_USER
     msg['Subject'] = 'jobserv: ended surge for ' + tag
