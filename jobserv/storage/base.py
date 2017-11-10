@@ -22,7 +22,7 @@ class BaseStorage(object):
     def _create_from_string(self, storage_path, contents):
         raise NotImplementedError()
 
-    def _create_from_file(self, storage_path, filename):
+    def _create_from_file(self, storage_path, filename, mimetype):
         raise NotImplementedError()
 
     def _get_as_string(self, storage_path):
