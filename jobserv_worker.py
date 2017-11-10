@@ -220,15 +220,47 @@ class JobServ(object):
             log.error('Unable to update run: %d: %s', r.status_code, r.text)
 
 
+def _create_systemd_service():
+    svc = '''
+[Unit]
+Description=JobServ Worker
+After=network.target
+
+[Service]
+Type=simple
+User={user}
+WorkingDirectory={working_dir}
+ExecStart={command}
+Restart=on-failure
+
+[Install]
+WantedBy=multi-user.target
+'''
+    svc = svc.format(
+        user=os.environ['USER'],
+        working_dir=os.path.dirname(os.path.abspath(script)),
+        command=os.path.abspath(script) + ' loop',
+    )
+    svc_file = os.path.join(os.path.dirname(script), 'jobserv.service')
+    with open(svc_file, 'w') as f:
+        f.write(svc)
+
+
 def cmd_register(args):
     '''Register this host with the configured JobServ server'''
     _create_conf(args.server_url, args.hostname, args.concurrent_runs,
                  args.host_tags, args.surges_only)
+    _create_systemd_service()
     p = HostProps()
     args.server.create_host(p.data)
     p.cache()
     print('''
-You now need to add a sudo entry to allow the worker to clean up root owned
+A SystemD service can be enabled with:
+  sudo cp jobserv.service /etc/systemd/system/
+  sudo systemctl enable jobserv
+  sudo systemctl start jobserv
+
+You also need to add a sudo entry to allow the worker to clean up root owned
 files from CI runs:
 
  echo "$USER ALL=(ALL) NOPASSWD:/bin/rm" | sudo tee /etc/sudoers.d/jobserv
