@@ -1,9 +1,12 @@
 # Copyright (C) 2017 Linaro Limited
 # Author: Andy Doan <andy.doan@linaro.org>
 
+import datetime
 import json
+import os
 import random
 import string
+import subprocess
 import sys
 
 import click
@@ -14,6 +17,7 @@ from jobserv.git_poller import run
 from jobserv.lava_reactor import run_reaper
 from jobserv.models import (
     Project, ProjectTrigger, TriggerTypes, Worker, db)
+from jobserv.storage import Storage
 from jobserv.worker import run_monitor_workers
 
 app = create_app()
@@ -168,3 +172,21 @@ def worker_enlist(name):
     w = Worker.query.filter(Worker.name == name).one()
     w.enlisted = True
     db.session.commit()
+
+
+@app.cli.command('backup')
+def backup():
+    command = (
+        'mysqldump',
+        '--user=' + db.engine.url.username,
+        '--password=' + db.engine.url.password,
+        '--host=' + db.engine.url.host,
+        db.engine.url.database
+    )
+    backup = '/data/jobserv-db.sql-%s' % datetime.datetime.now()
+    with open(backup, 'w') as f:
+        subprocess.check_call(command, stdout=f)
+
+    Storage()._create_from_file(
+        'backups/' + os.path.basename(backup), backup, 'application/x-sql')
+    os.unlink(backup)
