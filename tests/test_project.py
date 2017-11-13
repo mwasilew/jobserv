@@ -204,6 +204,22 @@ class ProjectSchemaTest(JobServTest):
             with self.assertRaises(ApiError):
                 proj.get_run_definition(dbrun, run, 'github_pr', {}, {})
 
+    def test_bad_container_auth(self):
+        with open(os.path.join(self.examples, 'private-container.yml')) as f:
+            data = yaml.load(f)
+            proj = ProjectDefinition.validate_data(data)
+
+            dbrun = Mock()
+            dbrun.build.project.name = 'jobserv'
+            dbrun.build.build_id = 1
+            dbrun.name = 'flake8'
+            dbrun.api_key = 'secret'
+            run = proj._data['triggers'][0]['runs'][0]
+
+            exp = 'not defined in the run\'s secrets'
+            with self.assertRaisesRegex(ApiError, exp):
+                proj.get_run_definition(dbrun, run, 'github_pr', {}, {})
+
     def test_host_tag_rundef(self):
         with open(os.path.join(self.examples, 'host-tag.yml')) as f:
             data = yaml.load(f)

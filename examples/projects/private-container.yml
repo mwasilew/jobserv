@@ -1,0 +1,17 @@
+timeout: 5
+triggers:
+  - name: git
+    type: git_poller
+    runs:
+      - name: simple-for-aarch64-host
+        container: example.com/foo/bar
+        # the token below must be the base64 encoded HTTP basic auth token
+        # defined in "secrets"
+        container-auth: example.com-token
+        host-tag: amd64
+        script: compile
+
+scripts:
+  compile: |
+    #!/bin/sh -ex
+    echo hello from private container

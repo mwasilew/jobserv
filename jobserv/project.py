@@ -109,6 +109,7 @@ class ProjectDefinition(object):
                 'api_worker.runner_download', _external=True),
             'trigger_type': trigger_type,
             'container': run['container'],
+            'container-auth': run.get('container-auth'),
             'privileged': run.get('privileged', False),
             'env': {},
             'secrets': secrets,
@@ -139,6 +140,13 @@ class ProjectDefinition(object):
                 if token and not val:
                     err = 'The script-repo requires a token(%s) not defined ' \
                           'in the run\'s secrets.\n' % token
+                    err += 'Secret keys sent to build: %r' % secrets.keys()
+                    raise ApiError(400, [err])
+        if rundef['container-auth']:
+            if rundef['container-auth'] not in secrets:
+                    err = ('"container-auth" requires a secret(%s) not '
+                           'defined in the run\'s secrets.\n'
+                           % rundef['container-auth'])
                     err += 'Secret keys sent to build: %r' % secrets.keys()
                     raise ApiError(400, [err])
 
