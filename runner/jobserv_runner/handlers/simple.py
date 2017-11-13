@@ -1,6 +1,9 @@
 # Copyright (C) 2017 Linaro Limited
 # Author: Andy Doan <andy.doan@linaro.org>
 
+import contextlib
+import fcntl
+import json
 import io
 import os
 import signal
@@ -80,9 +83,45 @@ class SimpleHandler(object):
     def log_context(self, context):
         return JobServLogger(context, self.jobserv)
 
+    @contextlib.contextmanager
+    def docker_login(self):
+        auth = self.rundef.get('container-auth')
+        if not auth:
+            # No authentication needed
+            yield
+            return
+
+        auth = self.rundef['secrets'][auth]
+        server = self.rundef['container'].split('/', 1)[0]
+
+        path = os.path.expanduser('~/.docker/config.json')
+        try:
+            os.mkdir(os.path.dirname(path))
+        except FileExistsError:
+            pass
+        with open(path, 'a+') as f:
+            fcntl.flock(f, fcntl.LOCK_EX)
+            f.seek(0)
+            data = json.load(f)
+            data['auths'][server] = {'auth': auth}
+            f.seek(0)
+            try:
+                f.truncate()
+                json.dump(data, f, indent=2)
+                f.flush()
+                yield
+            finally:
+                del data['auths'][server]
+                f.seek(0)
+                f.truncate()
+                json.dump(data, f, indent=2)
+
     def docker_pull(self):
         container = self.rundef['container']
-        with self.log_context('Pulling container: ' + container) as log:
+
+        logctx = self.log_context('Pulling container: ' + container)
+        login = self.docker_login()
+        with logctx as log, login:
             for x in (0, 2, 4):  # try three times with these back-off vals
                 if x:
                     log.warn('Unable to pull container, retrying in %ds', x)
