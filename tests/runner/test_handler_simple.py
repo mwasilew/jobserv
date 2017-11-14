@@ -2,6 +2,7 @@
 # Author: Andy Doan <andy.doan@linaro.org>
 
 import os
+import json
 import shutil
 import subprocess
 import tempfile
@@ -105,6 +106,26 @@ class SimpleHandlerTest(TestCase):
         self.handler.rundef = {'container': 'foo'}
         with self.assertRaises(HandlerError):
             self.handler.docker_pull()
+
+    @mock.patch('os.path.expanduser')
+    def test_docker_login(self, expand_user):
+        """Ensure we handle private containers."""
+        self.handler.rundef = {
+            'container': 'server.com/foo',
+            'container-auth': 'token',
+            'secrets': {'token': '1234'}
+        }
+        path = os.path.join(self.tmpdir, 'foo.json')
+        contents = {'auths': {}}
+        expand_user.return_value = path
+        with open(path, 'w') as f:
+            json.dump(contents, f)
+        with self.handler.docker_login():
+            with open(path) as f:
+                data = json.load(f)
+                self.assertEquals('1234', data['auths']['server.com']['auth'])
+        with open(path) as f:
+            self.assertEqual(contents, json.load(f))
 
     def test_prepare_mounts_null(self):
         """Ensure we can handle Null values"""

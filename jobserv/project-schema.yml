@@ -87,6 +87,9 @@ mapping:
                   container:
                     type: str
                     required: True
+                  container-auth:
+                    type: str
+                    required: False
                   privileged:
                     type: bool
                     required: false
