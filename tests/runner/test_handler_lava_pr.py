@@ -44,6 +44,7 @@ class LavaPRHandlerTest(TestCase):
         self.handler.rundef = {
             'script': '',
             'persistent-volumes': None,
+            'run_url': 'z',
             'secrets': {
                 'LAVA_USER': 'luser',
                 'LAVA_TOKEN': 'ltoken',

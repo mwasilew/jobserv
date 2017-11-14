@@ -47,6 +47,7 @@ class GitPollerHandlerTest(TestCase):
         self.handler.rundef = {
             'script': '',
             'persistent-volumes': None,
+            'run_url': 'foo',
             'env': {
                 'GIT_URL': repo_src,
                 'GIT_SHA': repo_sha,
@@ -64,6 +65,7 @@ class GitPollerHandlerTest(TestCase):
         self.handler.rundef = {
             'script': '',
             'persistent-volumes': None,
+            'run_url': 'foo',
             'env': {
                 'GIT_URL': '/tmp/foo-bar-does-not-existz',
                 'GIT_SHA': 'doesnt matter',
@@ -79,6 +81,7 @@ class GitPollerHandlerTest(TestCase):
         self.handler.rundef = {
             'script': '',
             'persistent-volumes': None,
+            'run_url': 'foo',
             'env': {
                 'GIT_URL': repo_src,
                 'GIT_SHA': 'badbeef',
