@@ -102,7 +102,10 @@ class SimpleHandler(object):
         with open(path, 'a+') as f:
             fcntl.flock(f, fcntl.LOCK_EX)
             f.seek(0)
-            data = json.load(f)
+            try:
+                data = json.load(f)
+            except:
+                data = {'auths': {}}
             data['auths'][server] = {'auth': auth}
             f.seek(0)
             try:
