@@ -415,7 +415,10 @@ class Run(db.Model, StatusMixin):
             return Run.query.filter(Run.status == BuildStatus.RUNNING).first()
         if rows == 1:
             cursor.execute('select @run_id')
-            return Run.query.get(cursor.fetchone()[0])
+            r = Run.query.get(cursor.fetchone()[0])
+            db.session.add(RunEvents(r, BuildStatus.RUNNING))
+            db.session.commit()
+            return r
 
 
 class RunEvents(db.Model, StatusMixin):
