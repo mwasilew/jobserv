@@ -192,33 +192,37 @@ class SimpleHandler(object):
            This is handy for Android repo style builds that exist in a private
            repository. By setting this in .netrc everything just works.
         """
-        rv = None
+        netrc = os.path.join(self.run_dir, '.netrc')
+        logctx = self.log_context('Creating container .netrc file')
+        with logctx as log, open(netrc, 'w') as f:
+            log.info('Creating token for jobserv run access')
+            machine = urllib.parse.urlparse(self.rundef['run_url'])
+            f.write('machine %s\n' % machine.netloc)
+            f.write('login jobserv\n')
+            f.write('password %s\n' % self.jobserv._api_key)
+
+            token = (self.rundef.get('secrets') or {}).get('githubtok')
+            if token:
+                log.info('Creating a github token entry')
+                f.write('machine github.com\n')
+                f.write('login %s\n' % token)
+
+            # we have to guess at a gitlab "machine" name
+            url = (self.rundef.get('script-repo') or {}).get('clone-url')
+            token = (self.rundef.get('secrets') or {}).get('gitlabtok')
+            if token and url:
+                log.info('Creating a gitlab token entry')
+                user = self.rundef['secrets']['gitlabuser']
+                f.write('machine %s\n' % urllib.parse.urlparse(url).netloc)
+                f.write('login %s\npassword %s\n' % (user, token))
+
         # NOTE: Curl (used by git) doesn't look at the $NETRC environment
         # for overriding the .netrc location. We have to assume the
         # container's $HOME is /root
-        token = (self.rundef.get('secrets') or {}).get('githubtok')
-        if token:
-            with self.log_context('Creating container .netrc file') as log:
-                log.info('Creating a github token entry')
-                netrc = os.path.join(self.run_dir, '.netrc')
-                with open(netrc, 'w') as f:
-                    f.write('machine github.com\n')
-                    f.write('login %s\n' % token)
-                rv = netrc, '/root/.netrc'
-
-        # we have to guess at a gitlab "machine" name
-        url = (self.rundef.get('script-repo') or {}).get('clone-url')
-        token = (self.rundef.get('secrets') or {}).get('gitlabtok')
-        if token and url:
-            with self.log_context('Creating container .netrc file') as log:
-                log.info('Creating a gitlab token entry')
-                user = self.rundef['secrets']['gitlabuser']
-                netrc = os.path.join(self.run_dir, '.netrc')
-                with open(netrc, 'a') as f:
-                    f.write('machine %s\n' % urllib.parse.urlparse(url).netloc)
-                    f.write('login %s\npassword %s\n' % (user, token))
-                rv = netrc, '/root/.netrc'
-        return rv
+        curlrc = os.path.join(self.run_dir, '.curlrc')
+        with open(curlrc, 'w') as f:
+            f.write('--netrcfile /root/.netrc')
+        return (netrc, '/root/.netrc'), (curlrc, '/root/.curlrc')
 
     def _clone_script_repo(self, log, repo, dst):
         url = repo['clone-url']
@@ -286,9 +290,8 @@ class SimpleHandler(object):
         """Prepare the directories we will bind mount by docker."""
         with self.log_context('Preparing bind mounts') as log:
             mounts = self._prepare_secrets(log) + self._prepare_volumes(log)
-        netrc = self._prepare_netrc()
-        if netrc:
-            mounts.append(netrc)
+        for mount in self._prepare_netrc():
+            mounts.append(mount)
         with self.log_context('Preparing script') as log:
             mounts.append(self.create_script(log))
         archive = os.path.join(self.run_dir, 'archive')

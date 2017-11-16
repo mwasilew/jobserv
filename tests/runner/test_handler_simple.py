@@ -16,6 +16,7 @@ class TestHandler(SimpleHandler):
     _jobserv = mock.Mock()
 
     def __init__(self, worker_dir, run_dir, jobserv, rundef):
+        jobserv._api_key = 'mocked not secure'
         super().__init__(worker_dir, run_dir, jobserv, rundef)
         self.action()
 
@@ -123,7 +124,7 @@ class SimpleHandlerTest(TestCase):
         with self.handler.docker_login():
             with open(path) as f:
                 data = json.load(f)
-                self.assertEquals('1234', data['auths']['server.com']['auth'])
+                self.assertEqual('1234', data['auths']['server.com']['auth'])
         with open(path) as f:
             self.assertEqual(contents, json.load(f))
 
@@ -133,6 +134,7 @@ class SimpleHandlerTest(TestCase):
             'secrets': None,
             'persistent-volumes': None,
             'script': 'foo',
+            'run_url': 'http://for-simulator-instructions/run',
         }
         self.handler.prepare_mounts()
 
@@ -143,6 +145,7 @@ class SimpleHandlerTest(TestCase):
             'secrets': {'foo': 'foo-secret-value'},
             'persistent-volumes': {'blah': '/foo'},
             'script': 'foo',
+            'run_url': 'http://for-simulator-instructions/run',
         }
         self.handler.prepare_mounts()
 
@@ -175,6 +178,7 @@ class SimpleHandlerTest(TestCase):
             'project': 'p',
             'secrets': {'foo': 'foo-secret-value'},
             'persistent-volumes': {'blah': '/foo'},
+            'run_url': 'http://for-simulator-instructions/run',
             'script-repo': {
                 # just clone ourself
                 'clone-url': repo,
@@ -191,6 +195,7 @@ class SimpleHandlerTest(TestCase):
             'project': 'p',
             'container': 'busybox',
             'persistent-volumes': {'blah': '/foo'},
+            'run_url': 'http://for-simulator-instructions/run',
             'script': '''#!/bin/sh -e\n
                       echo "running"
                       echo "persistent" > /foo/p.txt
