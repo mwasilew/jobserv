@@ -111,7 +111,7 @@ def add_trigger(project, user, type, secrets, definition_repo, definition_file,
             for _ in range(32))
     secret_map = {'webhook-key': key}
     for secret in (secrets or []):
-        k, v = secret.split('=')
+        k, v = secret.split('=', 1)
         secret_map[k.strip()] = v.strip()
 
     type = TriggerTypes[type].value
