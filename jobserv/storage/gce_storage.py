@@ -52,4 +52,6 @@ class Storage(BaseStorage):
         expiration = int(request.headers.get('X-EXPIRATION', '90'))
         b = self.bucket.blob(self._get_run_path(run, path))
         expiration = datetime.timedelta(seconds=expiration)
-        return redirect(b.generate_signed_url(expiration=expiration))
+        rd = 'inline; filename=%s' % os.path.basename(path)
+        return redirect(b.generate_signed_url(
+            expiration=expiration, response_disposition=rd))
