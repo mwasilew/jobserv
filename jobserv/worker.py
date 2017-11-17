@@ -11,6 +11,7 @@ from jobserv.settings import SURGE_SUPPORT_RATIO
 from jobserv.stats import CarbonClient
 
 SURGE_FILE = os.path.join(WORKER_DIR, 'enable_surge')
+DETECT_FLAPPING = True  # useful for unit testing
 
 logging.basicConfig(
     level='INFO', format='%(asctime)s %(levelname)s: %(message)s')
@@ -113,15 +114,17 @@ def _check_queue():
     path, base = os.path.split(SURGE_FILE)
     prev_surges = [x[len(base) + 1:] for x in os.listdir(path)
                    if x.startswith(base)]
+    log.debug('surges(%r), prev(%r)', surges, prev_surges)
     for tag in prev_surges:
         surge_file = SURGE_FILE + '-' + tag
         if tag not in surges:
-            if time.time() - os.stat(surge_file).st_mtime > 300:
+            if time.time() - os.stat(surge_file).st_mtime < 300:
                 # surges can sort of "flap". ie - you get bunches of emails
                 # when its right on the threshold. This just keeps us inside
                 # a surge for at least 5 minutes to help make sure we don't
                 # "flap"
-                continue
+                if DETECT_FLAPPING:
+                    continue
             log.info('Exiting surge support for %s', tag)
             with open(surge_file) as f:
                 msg_id = f.read().strip()

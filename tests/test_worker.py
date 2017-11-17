@@ -11,6 +11,7 @@ import jobserv.worker
 
 from jobserv.models import db, Build, Project, Run, Worker
 from jobserv.settings import SURGE_SUPPORT_RATIO
+from jobserv import worker as worker_module
 from jobserv.worker import _check_queue, _check_workers
 
 from tests import JobServTest
@@ -70,6 +71,7 @@ class TestWorkerMonitor(JobServTest):
 
         db.session.delete(Run.query.all()[0])
         db.session.commit()
+        worker_module.DETECT_FLAPPING = False
         _check_queue()
         self.assertFalse(os.path.exists(jobserv.worker.SURGE_FILE + '-amd64'))
 
@@ -109,6 +111,7 @@ class TestWorkerMonitor(JobServTest):
             db.session.add(r)
 
         db.session.commit()
+        worker_module.DETECT_FLAPPING = False
         _check_queue()
         self.assertTrue(os.path.exists(jobserv.worker.SURGE_FILE + '-amd64'))
         self.assertFalse(os.path.exists(jobserv.worker.SURGE_FILE + '-armhf'))
