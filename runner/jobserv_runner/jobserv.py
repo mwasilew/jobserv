@@ -70,7 +70,7 @@ class JobServApi(object):
         for x in range(retry):
             if _post(self._run_url, data, headers):
                 return True
-            time.sleep(2*x + 1)  # try and give the server a moment
+            time.sleep(2 * x + 1)  # try and give the server a moment
         return False
 
     def update_run(self, msg, status=None, retry=2, metadata=None):
@@ -145,7 +145,7 @@ class JobServApi(object):
                     break
                 msg = 'Error uploading %s, sleeping and retrying' % data[0]
                 self.update_status('UPLOADING', msg)
-                time.sleep(2*i)  # try and give the server a moment
+                time.sleep(2 * i)  # try and give the server a moment
             return e
 
         # it seems that 100 is about the most URLs you can sign in one HTTP

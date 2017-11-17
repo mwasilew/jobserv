@@ -127,7 +127,7 @@ class ProjectDefinition(object):
         # Soo... a pattern like: H?st_b* would become: h_st\_b%
         # and would match stuff like host_b and hast_FOOO
         rundef['host-tag'] = run['host-tag'].lower(
-            ).replace('*', '%').replace('_', '\_').replace('?', '_')
+        ).replace('*', '%').replace('_', '\_').replace('?', '_')
         if 'script' in run:
             rundef['script'] = self.scripts[run['script']]
         else:

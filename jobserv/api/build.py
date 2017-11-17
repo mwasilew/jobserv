@@ -121,5 +121,5 @@ def promoted_build_get(proj, name):
         Project.name == proj,
         Build.status == BuildStatus.PROMOTED,
         Build.name == name,
-        ))
+    ))
     return jsendify({'build': _promoted_as_json(Storage(), b)})

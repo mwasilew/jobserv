@@ -108,7 +108,7 @@ def add_trigger(project, user, type, secrets, definition_repo, definition_file,
                 hook_url, server_name):
     key = ''.join(random.SystemRandom().choice(
         string.ascii_lowercase + string.ascii_uppercase + string.digits)
-            for _ in range(32))
+        for _ in range(32))
     secret_map = {'webhook-key': key}
     for secret in (secrets or []):
         k, v = secret.split('=', 1)
