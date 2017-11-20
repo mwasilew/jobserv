@@ -7,7 +7,7 @@ import json
 import sys
 import urllib.request
 import urllib.parse
-from xmlrpc.client import ServerProxy
+from xmlrpc.client import ProtocolError, ServerProxy
 
 if len(sys.argv) != 2:
     sys.exit('Usage: %s jobfile' % sys.argv[0])
@@ -59,7 +59,14 @@ host = _getenv('LAVA_RPC').replace('://', '://%s:%s@' % (user, token))
 server = ServerProxy(host)
 with open(sys.argv[1]) as f:
     name = os.path.splitext(os.path.basename(sys.argv[1]))[0]
-    jobid = server.scheduler.submit_job(f.read())
+    try:
+        jobid = server.scheduler.submit_job(f.read())
+    except ProtocolError as e:
+        # e.url includes the password, so strip that out
+        e.url = e.url.replace(token, '<SECRET_TOKEN>')
+        msg = 'RPC Error(%d): %s\n  error=%s\n  headers=%r' % (
+            e.errcode, e.url, e.errmsg, e.headers)
+        sys.exit(msg)
     joburl = _getenv('LAVA_RPC').replace('RPC2', 'scheduler/job/%d' % jobid)
     print('Lava Job: %s' % joburl)
     _post(RUN_URL + 'tests/' + name + '/', data={'context': joburl})
