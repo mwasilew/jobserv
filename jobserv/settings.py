@@ -58,6 +58,7 @@ LAVA_URLBASE = os.environ.get(
 # every 90 seconds
 GIT_POLLER_INTERVAL = int(os.environ.get('GIT_POLLER_INTERVAL', '90'))
 
+STATS_CLIENT_MODULE = 'jobserv.stats.carbon:CarbonClient'
 CARBON_HOST = os.environ.get('CARBON_HOST')
 if CARBON_HOST:
     parts = CARBON_HOST.split(':')

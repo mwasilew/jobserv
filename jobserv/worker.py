@@ -8,7 +8,7 @@ import time
 from jobserv.models import db, BuildStatus, Run, Worker, WORKER_DIR
 from jobserv.sendmail import notify_surge_started, notify_surge_ended
 from jobserv.settings import SURGE_SUPPORT_RATIO
-from jobserv.stats import CarbonClient
+from jobserv.stats import StatsClient
 
 SURGE_FILE = os.path.join(WORKER_DIR, 'enable_surge')
 DETECT_FLAPPING = True  # useful for unit testing
@@ -34,6 +34,8 @@ def _check_worker(w):
             # the worker checks in every 20s. This means its missed 4 check-ins
             log.info('marking %s offline %ds without a check-in', w.name, diff)
             w.online = False
+            with StatsClient() as c:
+                c.worker_offline(w)
 
         # based on rough calculations a 1M file is about 9000 entries which is
         # about 2 days worth of information
@@ -56,6 +58,8 @@ def _check_worker(w):
         if w.online:
             w.online = False
             log.info('marking %s offline (no pings log)', w.name)
+            with StatsClient() as c:
+                c.worker_offline(w)
 
 
 def _check_workers():
@@ -72,8 +76,8 @@ def _check_queue():
         Run.id
     )
     queued = [[x.host_tag, True] for x in queued]
-    with CarbonClient() as c:
-        c.send('queued_runs', len(queued))
+    with StatsClient() as c:
+        c.queued_runs(len(queued))
 
     # now get a list of available slots for runs
     workers = Worker.query.filter(
@@ -129,6 +133,8 @@ def _check_queue():
             with open(surge_file) as f:
                 msg_id = f.read().strip()
                 notify_surge_ended(tag, msg_id)
+            with StatsClient() as c:
+                c.surge_ended(tag)
             os.unlink(surge_file)
 
     # now check for new surges
@@ -139,6 +145,8 @@ def _check_queue():
             with open(surge_file, 'w') as f:
                 msgid = notify_surge_started(tag)
                 f.write(msgid)
+            with StatsClient() as c:
+                c.surge_started(tag)
 
 
 def run_monitor_workers():

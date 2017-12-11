@@ -20,7 +20,7 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.hybrid import Comparator, hybrid_property
 
 from jobserv.settings import JOBS_DIR, WORKER_DIR
-from jobserv.stats import CarbonClient
+from jobserv.stats import StatsClient
 
 db = SQLAlchemy()
 
@@ -597,6 +597,8 @@ class Worker(db.Model):
         if not self.online:
             self.online = True
             db.session.commit()
+            with StatsClient() as c:
+                c.worker_online(self)
         path = self.pings_log
         if not os.path.exists(path):
             os.makedirs(os.path.dirname(path))
@@ -607,12 +609,7 @@ class Worker(db.Model):
 
         try:
             # this is a no-op if unconfigured
-            with CarbonClient() as c:
-                for k, v in kwargs.items():
-                    try:
-                        v = int(v[0])
-                    except ValueError:
-                        v = float(v[0])
-                    c.send('workers.%s.%s' % (self.name, k), v, now)
+            with StatsClient() as c:
+                c.worker_ping(self, now, kwargs)
         except:
             logging.exception('Unable to update metrics for ' + self.name)
