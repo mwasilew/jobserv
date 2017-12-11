@@ -20,7 +20,7 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.hybrid import Comparator, hybrid_property
 
 from jobserv.settings import JOBS_DIR, WORKER_DIR
-from jobserv.stats import CarbonClient
+from jobserv.stats import StatsClient
 
 db = SQLAlchemy()
 
@@ -607,7 +607,7 @@ class Worker(db.Model):
 
         try:
             # this is a no-op if unconfigured
-            with CarbonClient() as c:
+            with StatsClient() as c:
                 for k, v in kwargs.items():
                     try:
                         v = int(v[0])

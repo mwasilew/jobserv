@@ -8,7 +8,7 @@ import time
 from jobserv.models import db, BuildStatus, Run, Worker, WORKER_DIR
 from jobserv.sendmail import notify_surge_started, notify_surge_ended
 from jobserv.settings import SURGE_SUPPORT_RATIO
-from jobserv.stats import CarbonClient
+from jobserv.stats import StatsClient
 
 SURGE_FILE = os.path.join(WORKER_DIR, 'enable_surge')
 DETECT_FLAPPING = True  # useful for unit testing
@@ -72,7 +72,7 @@ def _check_queue():
         Run.id
     )
     queued = [[x.host_tag, True] for x in queued]
-    with CarbonClient() as c:
+    with StatsClient() as c:
         c.send('queued_runs', len(queued))
 
     # now get a list of available slots for runs
