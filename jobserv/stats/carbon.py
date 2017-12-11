@@ -53,3 +53,11 @@ class CarbonClient(object):
             except ValueError:
                 v = float(v[0])
             self.send('workers.%s.%s' % (self.name, k), v, timestamp)
+
+    def surge_started(self, tag):
+        '''Track when a surge has started for a given host-tag'''
+        self.send('workers.surge.%s' % tag, 1)
+
+    def surge_ended(self, tag):
+        '''Track when a surge has ended for a given host-tag'''
+        self.send('workers.surge.%s' % tag, 0)

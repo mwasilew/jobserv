@@ -129,6 +129,8 @@ def _check_queue():
             with open(surge_file) as f:
                 msg_id = f.read().strip()
                 notify_surge_ended(tag, msg_id)
+            with StatsClient() as c:
+                c.surge_ended(tag)
             os.unlink(surge_file)
 
     # now check for new surges
@@ -139,6 +141,8 @@ def _check_queue():
             with open(surge_file, 'w') as f:
                 msgid = notify_surge_started(tag)
                 f.write(msgid)
+            with StatsClient() as c:
+                c.surge_started(tag)
 
 
 def run_monitor_workers():
