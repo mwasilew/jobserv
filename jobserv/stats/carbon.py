@@ -52,7 +52,15 @@ class CarbonClient(object):
                 v = int(v[0])
             except ValueError:
                 v = float(v[0])
-            self.send('workers.%s.%s' % (self.name, k), v, timestamp)
+            self.send('workers.%s.%s' % (worker.name, k), v, timestamp)
+
+    def worker_offline(self, worker):
+        '''Mark a worker as offline'''
+        self.send('workers.%s.online' % worker.name, 0)
+
+    def worker_online(self, worker):
+        '''Mark a worker as offline'''
+        self.send('workers.%s.online' % worker.name, 1)
 
     def surge_started(self, tag):
         '''Track when a surge has started for a given host-tag'''

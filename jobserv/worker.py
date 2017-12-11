@@ -34,6 +34,8 @@ def _check_worker(w):
             # the worker checks in every 20s. This means its missed 4 check-ins
             log.info('marking %s offline %ds without a check-in', w.name, diff)
             w.online = False
+            with StatsClient() as c:
+                c.worker_offline(w)
 
         # based on rough calculations a 1M file is about 9000 entries which is
         # about 2 days worth of information
@@ -56,6 +58,8 @@ def _check_worker(w):
         if w.online:
             w.online = False
             log.info('marking %s offline (no pings log)', w.name)
+            with StatsClient() as c:
+                c.worker_offline(w)
 
 
 def _check_workers():

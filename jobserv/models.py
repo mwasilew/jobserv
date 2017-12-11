@@ -597,6 +597,8 @@ class Worker(db.Model):
         if not self.online:
             self.online = True
             db.session.commit()
+            with StatsClient() as c:
+                c.worker_online(self)
         path = self.pings_log
         if not os.path.exists(path):
             os.makedirs(os.path.dirname(path))
