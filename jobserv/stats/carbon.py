@@ -40,3 +40,16 @@ class CarbonClient(object):
             if sent == 0:
                 raise RuntimeError("socket connection broken")
             total += sent
+
+    def queued_runs(self, depth):
+        '''Track the number of queued runs'''
+        self.send('queued_runs', depth)
+
+    def worker_ping(self, worker, timestamp, metrics):
+        '''Track a list of metrics for a worker'''
+        for k, v in metrics.items():
+            try:
+                v = int(v[0])
+            except ValueError:
+                v = float(v[0])
+            self.send('workers.%s.%s' % (self.name, k), v, timestamp)

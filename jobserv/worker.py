@@ -73,7 +73,7 @@ def _check_queue():
     )
     queued = [[x.host_tag, True] for x in queued]
     with StatsClient() as c:
-        c.send('queued_runs', len(queued))
+        c.queued_runs(len(queued))
 
     # now get a list of available slots for runs
     workers = Worker.query.filter(

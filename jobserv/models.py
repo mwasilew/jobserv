@@ -608,11 +608,6 @@ class Worker(db.Model):
         try:
             # this is a no-op if unconfigured
             with StatsClient() as c:
-                for k, v in kwargs.items():
-                    try:
-                        v = int(v[0])
-                    except ValueError:
-                        v = float(v[0])
-                    c.send('workers.%s.%s' % (self.name, k), v, now)
+                c.worker_ping(self, now, kwargs)
         except:
             logging.exception('Unable to update metrics for ' + self.name)
