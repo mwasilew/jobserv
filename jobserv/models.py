@@ -169,7 +169,8 @@ class StatusMixin(object):
     @property
     def complete(self):
         return self._status in (
-            BuildStatus.PASSED.value, BuildStatus.FAILED.value)
+            BuildStatus.PASSED.value, BuildStatus.FAILED.value,
+            BuildStatus.PROMOTED.value)
 
     @contextlib.contextmanager
     def locked(self):
