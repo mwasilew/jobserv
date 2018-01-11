@@ -2,9 +2,11 @@
 # Author: Andy Doan <andy.doan@linaro.org>
 
 import contextlib
+import functools
 import logging
 import smtplib
 import time
+import traceback
 
 from email.mime.text import MIMEText
 from email.utils import make_msgid
@@ -151,3 +153,25 @@ def notify_surge_ended(tag, in_reply_to):
     msg['From'] = SMTP_USER
     msg['Subject'] = 'jobserv: ended surge for ' + tag
     _send(msg)
+
+
+def email_on_exception(*decorator_args):
+    '''Allows a function to automatically send an email if it hits an
+       unexpected error'''
+    subject = decorator_args[0]
+
+    def decorator(func):
+        @functools.wraps(func)
+        def wrapper(*args, **kwargs):
+            try:
+                func(*args, **kwargs)
+            except Exception:
+                msg = traceback.format_exc()
+                msg = MIMEText(msg)
+                msg['To'] = NOTIFICATION_EMAILS
+                msg['From'] = SMTP_USER
+                msg['Subject'] = subject
+                _send(msg)
+                raise
+        return wrapper
+    return decorator
