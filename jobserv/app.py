@@ -17,6 +17,7 @@ from jobserv.git_poller import run
 from jobserv.lava_reactor import run_reaper
 from jobserv.models import (
     Project, ProjectTrigger, TriggerTypes, Worker, db)
+from jobserv.sendmail import email_on_exception
 from jobserv.storage import Storage
 from jobserv.worker import run_monitor_workers
 
@@ -175,6 +176,7 @@ def worker_enlist(name):
 
 
 @app.cli.command('backup')
+@email_on_exception('jobserv: DB Backup Failed')
 def backup():
     command = (
         'mysqldump',
