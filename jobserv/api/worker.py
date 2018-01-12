@@ -136,6 +136,16 @@ def worker_update(name):
     return jsendify({}, 200)
 
 
+@blueprint.route('workers/<name>/events/', methods=['POST'])
+@worker_authenticated
+def worker_event(name):
+    w = get_or_404(Worker.query.filter_by(name=name))
+    payload = request.get_json()
+    if payload:
+        w.log_event(payload)
+    return jsendify({}, 201)
+
+
 @blueprint.route('runner', methods=('GET',))
 def runner_download():
     return send_file(open(RUNNER, 'rb'), mimetype='application/zip')

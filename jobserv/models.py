@@ -590,6 +590,13 @@ class Worker(db.Model):
                 return True
         return False
 
+    def log_event(self, payload):
+        logfile = os.path.join(WORKER_DIR, self.name, 'events.log')
+        if not os.path.exists(logfile):
+            os.makedirs(os.path.dirname(logfile))
+        with open(logfile, 'a') as f:
+            f.write(json.dumps(payload))
+
     @property
     def pings_log(self):
         return os.path.join(WORKER_DIR, self.name, 'pings.log')

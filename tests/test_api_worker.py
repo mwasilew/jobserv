@@ -62,6 +62,25 @@ class WorkerAPITest(JobServTest):
             self.assertIn('num_available=1', buf)
             self.assertIn('foo=bar', buf)
 
+    def test_worker_log_event(self):
+        w = Worker('w1', 'ubuntu', 12, 2, 'aarch64', 'key', 2, [])
+        w.enlisted = True
+        db.session.add(w)
+        db.session.commit()
+        headers = [
+            ('Content-type', 'application/json'),
+            ('Authorization', 'Token key'),
+        ]
+
+        event = '{"key": "val"}'
+        resp = self.client.post(
+            '/workers/w1/events/', headers=headers, data=event)
+        self.assertEqual(201, resp.status_code, resp.data)
+        p = os.path.join(jobserv.models.WORKER_DIR, 'w1/events.log')
+        with open(p) as f:
+            buf = f.read()
+            self.assertEqual(event, buf)
+
     @patch('jobserv.api.worker.Storage')
     def test_worker_get_run(self, storage):
         Run.in_test_mode = True

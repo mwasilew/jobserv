@@ -151,9 +151,12 @@ class JobServ(object):
             sys.exit(1)
         return r
 
-    def _post(self, resource, data):
+    def _post(self, resource, data, use_auth_headers=False):
+        headers = None
+        if use_auth_headers:
+            headers = self._auth_headers()
         url = urllib.parse.urljoin(config['jobserv']['server_url'], resource)
-        r = self.requests.post(url, json=data)
+        r = self.requests.post(url, json=data, headers=headers)
         if r.status_code != 201:
             log.error('Failed to issue request: %s\n' % r.text)
             sys.exit(1)
@@ -402,6 +405,30 @@ def cmd_loop(args):
             return
 
 
+def cmd_cronwrap(args):
+    logfile = os.path.basename(args.script) + '.log'
+    logfile = '/tmp/cronwrap-' + logfile
+    data = {
+        'title': 'JobServ CronWrap - ' + args.script,
+        'msg': '',
+        'type': 'info',
+    }
+    try:
+        with open(logfile, 'wb') as f:
+            start = time.time()
+            subprocess.check_call([args.script], stdout=f, stderr=f)
+            data['msg'] = 'Completed in %d seconds' % (time.time() - start)
+    except Exception:
+        data['type'] = 'error'
+        data['msg'] = 'Check %s for error message' % logfile
+        with open(logfile) as f:
+            data['msg'] += '\nFirst 1024 bytes of log:\n %s' % f.read(1024)
+        sys.exit('Failed to run cronwrap: ' + args.script)
+    finally:
+        resource = '/workers/%s/events/' % config['jobserv']['hostname']
+        JobServ()._post(resource, data, True)
+
+
 def main(args):
     if getattr(args, 'func', None):
         log.debug('running: %s', args.func.__name__)
@@ -442,6 +469,12 @@ def get_args(args=None):
                    help='''Interval in hours to run to run "dock rm" on
                         containers that have exited. default is every
                         %(default)d hours''')
+
+    p = sub.add_parser('cronwrap',
+                       help='''Run a command and report back to the jobserv
+                            if it passed or not''')
+    p.add_argument('script', help='Program to run')
+    p.set_defaults(func=cmd_cronwrap)
 
     args = parser.parse_args(args)
     args.server = JobServ()
