@@ -140,6 +140,8 @@ def worker_update(name):
 @worker_authenticated
 def worker_event(name):
     w = get_or_404(Worker.query.filter_by(name=name))
+    if not w.enlisted:
+        return jsendify({}, 403)
     payload = request.get_json()
     if payload:
         w.log_event(payload)
