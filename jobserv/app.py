@@ -159,6 +159,45 @@ def project_add_trigger(project, user, type, secrets=None,
                 definition_file, hook_url, server_name)
 
 
+@project.command('update-trigger')
+@click.argument('project')
+@click.option('--user', '-u', required=True)
+@click.option('--type', '-t', required=True,
+              type=click.Choice([x.name for x in TriggerTypes]))
+@click.option('--secret', '-s', 'secrets', multiple=True)
+@click.option('--definition_repo', '-r', default=None)
+@click.option('--definition_file', '-f', default=None)
+def project_update_trigger(project, user, type, secrets=None,
+                           definition_repo=None, definition_file=None):
+    t = ProjectTrigger.query.join(Project).filter(
+        Project.name == project,
+        ProjectTrigger.user == user,
+        ProjectTrigger.type == TriggerTypes[type].value,
+    ).one()
+    if definition_repo and t.definition_repo != definition_repo:
+        click.echo('Updating defintion_repo')
+        t.definition_repo = definition_repo
+    if definition_file and t.definition_file != definition_file:
+        click.echo('Updating defintion_file')
+        t.definition_file = definition_file
+
+    stored_secrets = json.loads(t.secrets)
+    for secret in (secrets or []):
+        k, v = secret.split('=', 1)
+        if k in stored_secrets:
+            if not v:
+                click.echo('Removing secret: %s' % k)
+                del stored_secrets[k]
+            elif v != stored_secrets[k]:
+                click.echo('Updating secret: %s' % k)
+                stored_secrets[k] = v
+        else:
+            click.echo('Adding new secret: %s' % k)
+            stored_secrets[k] = v
+    t.secrets = json.dumps(stored_secrets)
+    db.session.commit()
+
+
 @app.cli.group()
 def worker():
     pass
