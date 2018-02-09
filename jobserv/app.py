@@ -2,6 +2,7 @@
 # Author: Andy Doan <andy.doan@linaro.org>
 
 import datetime
+import fnmatch
 import json
 import os
 import random
@@ -45,8 +46,11 @@ def project():
 
 
 @project.command('list')
-def project_list():
+@click.argument('pattern', required=False)
+def project_list(pattern=None):
     for p in Project.query.all():
+        if pattern and not fnmatch.fnmatch(p.name, pattern):
+            continue
         click.echo('Project: ' + p.name)
         triggers = ProjectTrigger.query.filter(ProjectTrigger.project == p)
         if triggers.count():
