@@ -127,6 +127,10 @@ class ProjectTrigger(db.Model):
             'secrets': json.loads(self.secrets or '{}'),
         }
 
+    def __repr__(self):
+        return '<Trigger %s: %s>' % (
+            self.project.name, TriggerTypes(self.type).name)
+
 
 class BuildStatus(enum.Enum):
     QUEUED = 1
