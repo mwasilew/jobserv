@@ -53,6 +53,8 @@ mapping:
           name:
             type: str
             required: True
+            range:
+              max: 80
           type:
             type: str
             required: True
