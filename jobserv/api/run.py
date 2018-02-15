@@ -8,12 +8,12 @@ import yaml
 
 from flask import Blueprint, current_app, request, send_file, url_for
 
+from jobserv.flask import permissions
 from jobserv.storage import Storage
 from jobserv.jsend import ApiError, get_or_404, jsendify
 from jobserv.models import (
     db, Build, BuildStatus, Project, Run, Test, TestResult
 )
-from jobserv.permissions import run_can_access_secrets
 from jobserv.project import ProjectDefinition
 from jobserv.sendmail import notify_build_complete
 from jobserv.trigger import trigger_runs
@@ -212,7 +212,7 @@ def run_get_definition(proj, build_id, run):
         _authenticate_runner(r)
     except ApiError:
         rundef = json.loads(rundef)
-        if not run_can_access_secrets(r):
+        if not permissions.run_can_access_secrets(r):
             # The requestor is not authorized to view secrets
             secrets = rundef.get('secrets')
             if secrets:
