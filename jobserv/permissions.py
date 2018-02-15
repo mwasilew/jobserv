@@ -15,6 +15,11 @@ def project_can_access(project_path):
     return True
 
 
+def run_can_access_secrets(run):
+    '''Can a user access the secrets in rundef.json'''
+    return False
+
+
 def health_can_access(health_path):
     '''Allow anyone to access to the health endpoints.'''
     return True
