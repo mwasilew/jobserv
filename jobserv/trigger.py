@@ -75,6 +75,8 @@ def trigger_build(project, reason, trigger_name, params, secrets, proj_def):
     try:
         if reason:
             b.reason = reason
+        if trigger_name:
+            b.trigger_name = trigger_name
         storage = Storage()
         storage.create_project_definition(
             b, yaml.dump(proj_def._data, default_flow_style=False))

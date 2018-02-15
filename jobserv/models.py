@@ -202,6 +202,7 @@ class Build(db.Model, StatusMixin):
     proj_id = db.Column(db.Integer, db.ForeignKey(Project.id), nullable=False)
     _status = db.Column(db.Integer)
     reason = db.Column(db.String(4096))
+    trigger_name = db.Column(db.String(80))
 
     name = db.Column(db.String(256))
     annotation = db.Column(db.Text())
@@ -232,6 +233,8 @@ class Build(db.Model, StatusMixin):
         }
         if self.name:
             data['name'] = self.name
+        if self.trigger_name:
+            data['trigger_name'] = self.trigger_name
         if self.status_events:
             data['created'] = self.status_events[0].time
             if self.complete:
