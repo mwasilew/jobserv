@@ -13,6 +13,7 @@ from jobserv.jsend import ApiError, get_or_404, jsendify
 from jobserv.models import (
     db, Build, BuildStatus, Project, Run, Test, TestResult
 )
+from jobserv.permissions import run_can_access_secrets
 from jobserv.project import ProjectDefinition
 from jobserv.sendmail import notify_build_complete
 from jobserv.trigger import trigger_runs
@@ -210,11 +211,12 @@ def run_get_definition(proj, build_id, run):
     try:
         _authenticate_runner(r)
     except ApiError:
-        # This is an unauthenticated request, remove the secrets
         rundef = json.loads(rundef)
-        secrets = rundef.get('secrets')
-        if secrets:
-            rundef['secrets'] = {k: 'TODO' for k, v in secrets.items()}
+        if not run_can_access_secrets(r):
+            # The requestor is not authorized to view secrets
+            secrets = rundef.get('secrets')
+            if secrets:
+                rundef['secrets'] = {k: 'TODO' for k, v in secrets.items()}
         del rundef['api_key']
         rundef = json.dumps(rundef, indent=2)
 

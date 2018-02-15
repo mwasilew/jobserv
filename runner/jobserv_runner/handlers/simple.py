@@ -278,6 +278,8 @@ class SimpleHandler(object):
     mkdir /tmp/sim-run
     cd /tmp/sim-run
     wget -O runner {runner}
+    # wget'ing the .rundef.json file may required the --header flag if the
+    # jobserv API requires authentication.
     wget -O rundef.json {run}.rundef.json
     # open rundef.json and update values for secrets
     PYTHONPATH=./runner \
