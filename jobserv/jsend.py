@@ -41,8 +41,14 @@ def get_or_404(query):
 
 
 def paginate_custom(item_type, query, cb_func):
-    limit = int(request.args.get('limit', '25'))
-    page = int(request.args.get('page', '0'))
+    try:
+        limit = int(request.args.get('limit', '25'))
+    except ValueError:
+        raise ApiError(400, 'Invalid pagination. "limit" must be numeric')
+    try:
+        page = int(request.args.get('page', '0'))
+    except ValueError:
+        raise ApiError(400, 'Invalid pagination. "page" must be numeric')
     total = query.count()
     offset = page * limit
 
