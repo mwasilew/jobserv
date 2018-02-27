@@ -28,7 +28,10 @@ fi
 # code changes to disk. This is helpful for debugging something already in k8s
 
 if [ -z "$FLASK_DEBUG" ] ; then
-	exec /usr/bin/gunicorn -w4 -b 0.0.0.0:8000 $FLASK_APP
+	if [ -n "$STATSD_HOST" ] ; then
+		STATSD="--statsd-host $STATSD_HOST"
+	fi
+	exec /usr/bin/gunicorn $STATSD -n jobserv -w4 -b 0.0.0.0:8000 $FLASK_APP
 fi
 
 exec /usr/bin/flask run -h 0.0.0.0 -p 8000
