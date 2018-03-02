@@ -17,6 +17,29 @@ from jobserv_runner.cmd import stream_cmd
 from jobserv_runner.jobserv import JobServApi
 from jobserv_runner.logging import ContextLogger
 
+passed_msg = '''Runner has completed
+          ________
+          |  o  o|           Thumbs Up
+          |___\/_|_____||_
+          |       _____|__|
+          |      |
+          |______|
+          | |  | |
+          | |  | |
+          |_|  |_|
+'''
+failed_msg = '''Runner has completed
+          ________
+          |  o  o|           Thumbs Down
+          |___/\_|________
+          |       _____|__|
+          |      |     ||
+          |______|
+          | |  | |
+          | |  | |
+          |_|  |_|
+'''
+
 
 class HandlerError(Exception):
     """An exception that can be used to tell SimpleHandler.main that the error
@@ -360,7 +383,10 @@ class SimpleHandler(object):
 
             if not h.upload_artifacts():
                 last_status = 'FAILED'
-            jobserv.update_status(last_status, 'Runner has completed')
+            if last_status == 'PASSED':
+                jobserv.update_status(last_status, passed_msg)
+            else:
+                jobserv.update_status(last_status, failed_msg)
             return True
         except HandlerError as e:
             jobserv.update_status('FAILED', str(e))
