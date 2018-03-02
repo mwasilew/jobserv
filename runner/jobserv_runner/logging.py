@@ -48,7 +48,7 @@ class ContextLogger():
         self.io.write(msg)
 
     def _log(self, level, msg, *args):
-        pre = '   %s %-5s ' % (self._now(), level)
+        pre = '   %s: %-5s ' % (self._now(), level)
         self._write(pre + msg % args + '\n')
 
     def info(self, msg, *args):

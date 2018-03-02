@@ -23,7 +23,7 @@ class LoggerTest(TestCase):
         log.now = datetime.datetime.utcnow()
 
         getattr(log, level)('foo %s', 'bar')
-        expected = '   %s %-5s foo bar\n' % (log.now, level.upper())
+        expected = '   %s: %-5s foo bar\n' % (log.now, level.upper())
         self.assertEqual(expected, log.io.getvalue())
 
     def test_info(self):
