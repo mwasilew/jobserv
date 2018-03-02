@@ -50,7 +50,10 @@ class GitPoller(SimpleHandler):
 
         repo_dir = os.path.join(self.run_dir, 'repo')
         with self.log_context('Cloning git repository') as log:
-            self._clone(log, repo_dir)
+            if os.path.exists(repo_dir):
+                log.warn('Reusing repository from previous run')
+            else:
+                self._clone(log, repo_dir)
         mounts.append((repo_dir, '/repo'))
         self.container_cwd = '/repo'
         return mounts

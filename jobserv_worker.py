@@ -315,18 +315,33 @@ def _delete_rundir(rundir):
         sys.exit(1)
 
 
-def _handle_run(jobserv, rundef):
+def _handle_reboot(rundir, rundef):
+    log.warn('RebootAndContinue requested by %s', rundef['run_url'])
+    reboot_run = os.path.join(os.path.dirname(script), 'rebooted-run')
+    if os.path.exists(reboot_run):
+        log.error('Reboot run directory(%s) exists, deleting', reboot_run)
+        shutil.rmtree(reboot_run)
+
+    os.rename(rundir, reboot_run)
+    os.execv('/usr/bin/reboot', ['/usr/bin/reboot'])
+
+
+def _handle_run(jobserv, rundef, rundir=None):
     runsdir = os.path.join(os.path.dirname(script), 'runs')
     try:
         jobserv.update_run(rundef, 'RUNNING', 'Setting up runner on worker')
         if not os.path.exists(runsdir):
             os.mkdir(runsdir)
-        rundir = tempfile.mkdtemp(dir=runsdir)
+        if not rundir:
+            rundir = tempfile.mkdtemp(dir=runsdir)
         sys.path.insert(0, _download_runner(rundef['runner_url'], rundir))
         m = importlib.import_module(
             'jobserv_runner.handlers.' + rundef['trigger_type'])
         if os.fork() == 0:
-            m.handler.execute(os.path.dirname(script), rundir, rundef)
+            try:
+                m.handler.execute(os.path.dirname(script), rundir, rundef)
+            except m.handler.RebootAndContinue as e:
+                _handle_reboot(rundir, rundef)
             _delete_rundir(rundir)
     except SystemExit:
         raise
@@ -337,8 +352,28 @@ def _handle_run(jobserv, rundef):
         jobserv.update_run(rundef, 'FAILED', msg)
 
 
+def _handle_rebooted_run(jobserv):
+    reboot_run = os.path.join(os.path.dirname(script), 'rebooted-run')
+    if os.path.exists(reboot_run):
+        log.warn('Found rebooted-run, preparing to execute')
+
+        rundir = os.path.join(os.path.dirname(script), 'runs/rebooted-run')
+        os.rename(reboot_run, rundir)
+
+        flocks = HostProps.get_available_runners()
+        with open(os.path.join(rundir, 'rundef.json')) as f:
+            rundef = json.load(f)
+        rundef['flock'] = flocks.pop()
+        jobserv.update_run(rundef, 'RUNNING', 'Resuming rebooted run')
+        _handle_run(jobserv, rundef, rundir)
+        return True
+
+
 def cmd_check(args):
     '''Check in with server for work'''
+    if _handle_rebooted_run(args.server):
+        return
+
     HostProps().update_if_needed(args.server)
     data, flocks = args.server.check_in()
     for rundef in data['data']['worker'].get('run-defs', []):

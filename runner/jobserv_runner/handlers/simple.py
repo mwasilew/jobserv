@@ -6,6 +6,7 @@ import fcntl
 import json
 import io
 import os
+import shutil
 import signal
 import subprocess
 import time
@@ -38,6 +39,17 @@ failed_msg = '''Runner has completed
           | |  | |
           | |  | |
           |_|  |_|
+'''
+# Courtesy of: http://patorjk.com/software/taag/#p=display&f=Doom&t=Rebooting
+reboot_msg = '''
+   ______     _                 _   _               _   _   _
+   | ___ \   | |               | | (_)             | | | | | |
+   | |_/ /___| |__   ___   ___ | |_ _ _ __   __ _  | | | | | |
+   |    // _ \ '_ \ / _ \ / _ \| __| | '_ \ / _` | | | | | | |
+   | |\ \  __/ |_) | (_) | (_) | |_| | | | | (_| | |_| |_| |_|
+   \_| \_\___|_.__/ \___/ \___/ \__|_|_| |_|\__, | (_) (_) (_)
+                                             __/ |
+                                            |___/
 '''
 
 
@@ -95,6 +107,10 @@ class JobServLogger(ContextLogger):
 
 class SimpleHandler(object):
     """Executes the steps needed to do a "simple" trigger-type rundef"""
+
+    class RebootAndContinue(Exception):
+        """Tells the jobserv_worker script to save this run, reboot the system,
+           and continue it after reboot."""
 
     def __init__(self, worker_dir, run_dir, jobserv, rundef):
         self.worker_dir = worker_dir
@@ -190,7 +206,8 @@ class SimpleHandler(object):
     def _prepare_secrets(self, log):
         """Create the /secrets folder that will be bind-mounted by docker."""
         secrets = os.path.join(self.run_dir, 'secrets')
-        os.mkdir(secrets)
+        if not os.path.exists(secrets):
+            os.mkdir(secrets)  # probably a rebooted run
         for secret, value in (self.rundef.get('secrets') or {}).items():
             log.info('Creating secret: %s', secret)
             with open(os.path.join(secrets, secret), 'w') as f:
@@ -263,6 +280,8 @@ class SimpleHandler(object):
                 p = urllib.parse.urlsplit(url)
                 url = p.scheme + '://' + token + '@' + p.netloc + p.path
 
+        if os.path.exists(dst):
+            shutil.rmtree(dst)  # probably a rebooted run
         if not log.exec(['git', 'clone', url, dst]):
             raise HandlerError('Unable to clone repo: ' + repo['clone-url'])
 
@@ -282,15 +301,22 @@ class SimpleHandler(object):
 
     def create_script(self, log):
         """Create the script that will run in the container."""
+        reboot_script = self.rundef.get('reboot-script')
         repo = self.rundef.get('script-repo')
         script_dir = os.path.join(self.run_dir, 'script-repo')
-        if repo:
+        if repo and not reboot_script:
             self._clone_script_repo(log, repo, script_dir)
         else:
-            os.mkdir(script_dir)
+            if not os.path.exists(script_dir):
+                os.mkdir(script_dir)  # probably a rebooted run
             script = os.path.join(script_dir, 'do_run')
+            if not reboot_script:
+                contents = self.rundef['script']
+            else:
+                log.info('Using reboot-script for run')
+                contents = reboot_script
             with open(script, 'w') as f:
-                f.write(self.rundef['script'])
+                f.write(contents)
                 os.fchmod(f.fileno(), 0o555)
             self._container_command = '/script-repo/do_run'
         return script_dir, '/script-repo'
@@ -320,7 +346,8 @@ class SimpleHandler(object):
         with self.log_context('Preparing script') as log:
             mounts.append(self.create_script(log))
         archive = os.path.join(self.run_dir, 'archive')
-        os.mkdir(archive)
+        if not os.path.exists(archive):
+            os.mkdir(archive)  # probably a rebooted run
         mounts.append((archive, '/archive'))
         return mounts
 
@@ -355,6 +382,29 @@ class SimpleHandler(object):
                 return False
         return True
 
+    def check_for_reboot(self):
+        reboot = os.path.join(self.run_dir, 'archive/execute-on-reboot')
+        # TODO - handle timeout adjustment?
+        if not os.path.isfile(reboot):
+            return
+
+        with self.log_context('Found execute-on-reboot script.') as log:
+            log.info('Preparing run for reboot')
+            with open(reboot) as f:
+                self.rundef['reboot-script'] = f.read()
+            os.unlink(reboot)
+
+            # The flock is a file descriptor that can't be serialized.
+            # We do need to keep a reference to it so the worker won't try
+            # and start another run while we are trying to reboot.
+            self.flock_hack = self.rundef['flock']
+            del self.rundef['flock']
+            with open(os.path.join(self.run_dir, 'rundef.json'), 'w') as f:
+                json.dump(self.rundef, f)
+            log.warn(reboot_msg)
+
+        raise self.RebootAndContinue()
+
     @classmethod
     def get_jobserv(clazz, rundef):
         if rundef.get('simulator'):
@@ -377,6 +427,7 @@ class SimpleHandler(object):
             last_status = 'FAILED'
             msg = 'Script completed with error(s)\n'
             if h.docker_run(mounts):
+                h.check_for_reboot()
                 last_status = 'PASSED'
                 msg = 'Script completed\n'
             h.jobserv.update_run(msg.encode())
@@ -388,6 +439,8 @@ class SimpleHandler(object):
             else:
                 jobserv.update_status(last_status, failed_msg)
             return True
+        except clazz.RebootAndContinue:
+            raise
         except HandlerError as e:
             jobserv.update_status('FAILED', str(e))
         except Exception as e:
