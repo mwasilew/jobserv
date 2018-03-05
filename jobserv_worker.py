@@ -381,6 +381,7 @@ def cmd_check(args):
         # by placing the flock in the rundef, it will stay locked after
         # the runner forks since the open file will be referenced
         rundef['flock'] = flocks.pop()
+        rundef['env']['H_WORKER'] = config['jobserv']['hostname']
         log.info('executing run: %s', rundef.get('run_url'))
         _handle_run(args.server, rundef)
     ver = data['data']['worker']['version']
