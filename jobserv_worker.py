@@ -70,7 +70,7 @@ class HostProps(object):
         surges = int(config.get('jobserv', 'surges_only', fallback='0'))
         self.data = {
             'cpu_total': cpu_count(),
-            'cpu_type': platform.processor(),
+            'cpu_type': platform.processor() or platform.machine(),
             'mem_total': mem,
             'distro': self._get_distro(),
             'api_key': config['jobserv']['host_api_key'],
