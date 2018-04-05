@@ -25,6 +25,9 @@ class BaseStorage(object):
     def _create_from_file(self, storage_path, filename, mimetype):
         raise NotImplementedError()
 
+    def _get_raw(self, storage_path):
+        raise NotImplementedError()
+
     def _get_as_string(self, storage_path):
         raise NotImplementedError()
 
@@ -54,7 +57,9 @@ class BaseStorage(object):
         name = '%s/%s/project.yml' % (build.project.name, build.build_id)
         return self._get_as_string(name)
 
-    def get_artifact_content(self, run, path):
+    def get_artifact_content(self, run, path, decoded=True):
+        if not decoded:
+            return self._get_raw(self._get_run_path(run, path))
         return self._get_as_string(self._get_run_path(run, path))
 
     def set_run_definition(self, run, definition):

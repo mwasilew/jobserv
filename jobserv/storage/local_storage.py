@@ -42,6 +42,12 @@ class Storage(BaseStorage):
         with open(filename, 'rb') as fin, open(path, 'wb') as fout:
             shutil.copyfileobj(fin, fout)
 
+    def _get_raw(self, storage_path):
+        assert storage_path[0] != '/'
+        path = os.path.join(self.artifacts, storage_path)
+        with open(path, 'rb') as f:
+            return f.read()
+
     def _get_as_string(self, storage_path):
         assert storage_path[0] != '/'
         path = os.path.join(self.artifacts, storage_path)

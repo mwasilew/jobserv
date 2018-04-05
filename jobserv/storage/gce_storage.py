@@ -33,8 +33,11 @@ class Storage(BaseStorage):
         with open(filename, 'rb') as f:
             b.upload_from_file(f, content_type=content_type)
 
+    def _get_raw(self, storage_path):
+        return self.bucket.blob(storage_path).download_as_string()
+
     def _get_as_string(self, storage_path):
-        return self.bucket.blob(storage_path).download_as_string().decode()
+        return self._get_raw(storage_path).decode()
 
     def list_artifacts(self, run):
         name = '%s/%s/%s/' % (
