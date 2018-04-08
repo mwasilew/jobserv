@@ -111,6 +111,9 @@ class SimpleHandler(object):
     class RebootAndContinue(Exception):
         """Tells the jobserv_worker script to save this run, reboot the system,
            and continue it after reboot."""
+        def __init__(self, cold):
+            super().__init__()
+            self.cold = cold
 
     def __init__(self, worker_dir, run_dir, jobserv, rundef):
         self.worker_dir = worker_dir
@@ -383,12 +386,17 @@ class SimpleHandler(object):
         return True
 
     def check_for_reboot(self):
-        reboot = os.path.join(self.run_dir, 'archive/execute-on-reboot')
+        warm = os.path.join(self.run_dir, 'archive/execute-on-reboot')
+        cold = os.path.join(self.run_dir, 'archive/execute-on-cold-reboot')
         # TODO - handle timeout adjustment?
-        if not os.path.isfile(reboot):
+        if os.path.isfile(warm):
+            reboot = warm
+        elif os.path.isfile(cold):
+            reboot = cold
+        else:
             return
 
-        with self.log_context('Found execute-on-reboot script.') as log:
+        with self.log_context('Found %s script.' % reboot) as log:
             log.info('Preparing run for reboot')
             with open(reboot) as f:
                 self.rundef['reboot-script'] = f.read()
@@ -403,7 +411,7 @@ class SimpleHandler(object):
                 json.dump(self.rundef, f)
             log.warn(reboot_msg)
 
-        raise self.RebootAndContinue()
+        raise self.RebootAndContinue(cold=(reboot == cold))
 
     @classmethod
     def get_jobserv(clazz, rundef):
