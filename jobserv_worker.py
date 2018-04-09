@@ -315,14 +315,17 @@ def _delete_rundir(rundir):
         sys.exit(1)
 
 
-def _handle_reboot(rundir, rundef):
-    log.warn('RebootAndContinue requested by %s', rundef['run_url'])
+def _handle_reboot(rundir, rundef, cold):
+    log.warn('RebootAndContinue(cold=%s) requested by %s',
+             cold, rundef['run_url'])
     reboot_run = os.path.join(os.path.dirname(script), 'rebooted-run')
     if os.path.exists(reboot_run):
         log.error('Reboot run directory(%s) exists, deleting', reboot_run)
         shutil.rmtree(reboot_run)
 
     os.rename(rundir, reboot_run)
+    if cold:
+        os.execv('/usr/bin/cold-reboot', ['/usr/bin/cold-reboot'])
     os.execv('/usr/bin/reboot', ['/usr/bin/reboot'])
 
 
@@ -341,7 +344,7 @@ def _handle_run(jobserv, rundef, rundir=None):
             try:
                 m.handler.execute(os.path.dirname(script), rundir, rundef)
             except m.handler.RebootAndContinue as e:
-                _handle_reboot(rundir, rundef)
+                _handle_reboot(rundir, rundef, e.cold)
             _delete_rundir(rundir)
     except SystemExit:
         raise
