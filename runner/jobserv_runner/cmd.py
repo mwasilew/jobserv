@@ -20,7 +20,7 @@ def _cmd_output(cmd, cwd=None):
         poller.register(fd, select.POLLIN)
 
     while len(fds) > 0:
-        events = poller.poll(0)
+        events = poller.poll(0.1)
         if not events and p.poll() is not None:
             break
         for fd, event in events:
