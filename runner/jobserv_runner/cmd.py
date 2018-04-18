@@ -47,6 +47,7 @@ def stream_cmd(stream_cb, cmd, cwd=None):
                     last_buff += buff
                 else:
                     last_buff = b''
+                    last_update = now
             else:
                 last_buff += buff
         if last_buff:
