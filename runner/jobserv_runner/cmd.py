@@ -20,7 +20,7 @@ def _cmd_output(cmd, cwd=None):
         poller.register(fd, select.POLLIN)
 
     while len(fds) > 0:
-        events = poller.poll(0)
+        events = poller.poll(0.1)
         if not events and p.poll() is not None:
             break
         for fd, event in events:
@@ -41,12 +41,13 @@ def stream_cmd(stream_cb, cmd, cwd=None):
     try:
         for buff in _cmd_output(cmd, cwd):
             now = time.time()
-            # stream data every 20s or if we have a 1M of data
-            if now - last_update > 20 or len(buff) > 1048576:
+            # stream data every 10s or if we have a 1k of data
+            if now - last_update > 10 or len(buff) >= 1024:
                 if not stream_cb(last_buff + buff):
                     last_buff += buff
                 else:
                     last_buff = b''
+                    last_update = now
             else:
                 last_buff += buff
         if last_buff:
