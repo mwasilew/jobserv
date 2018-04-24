@@ -50,10 +50,8 @@ def stream_cmd(stream_cb, cmd, cwd=None):
                     last_update = now
             else:
                 last_buff += buff
+    finally:
         if last_buff:
             if not stream_cb(last_buff):
                 # Unable to stream part of command output
                 raise subprocess.CalledProcessError(0, cmd)
-    except subprocess.CalledProcessError as e:
-        e.unstreamed = last_buff
-        raise e
