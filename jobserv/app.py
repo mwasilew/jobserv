@@ -13,11 +13,13 @@ import sys
 import click
 import requests
 
+from sqlalchemy.orm.exc import NoResultFound
+
 from jobserv.flask import create_app
 from jobserv.git_poller import run
 from jobserv.lava_reactor import run_reaper
 from jobserv.models import (
-    Project, ProjectTrigger, TriggerTypes, Worker, db)
+    Build, BuildStatus, Project, ProjectTrigger, Run, TriggerTypes, Worker, db)
 from jobserv.sendmail import email_on_exception
 from jobserv.storage import Storage
 from jobserv.worker import run_monitor_workers
@@ -236,3 +238,37 @@ def backup():
     Storage()._create_from_file(
         'backups/' + os.path.basename(backup), backup, 'application/x-sql')
     os.unlink(backup)
+
+
+@app.cli.command('run-status')
+@click.argument('project', required=True)
+@click.argument('build', type=int, required=True)
+@click.argument('run', required=True)
+@click.argument('status', required=False,
+                type=click.Choice(['QUEUED', 'PASSED', 'FAILED']))
+def run_status(project, build, run, status=None):
+    '''Get the status of a Run and optionally set it.'''
+    try:
+        run = Run.query.join(
+            Build
+        ).join(
+            Project
+        ).filter(
+            Project.name == project,
+            Build.build_id == build,
+            Run.name == run
+        ).one()
+    except NoResultFound:
+        click.echo('Could not find this project/build/run')
+        return
+
+    click.echo(run)
+    if status:
+        status = BuildStatus[status]
+        if status == BuildStatus.QUEUED:
+            click.echo('Removing test results since run is getting re-queued')
+            for t in run.tests:
+                db.session.delete(t)
+        run.set_status(status)
+        db.session.commit()
+        click.echo('Run is now: %r' % run)
