@@ -19,7 +19,9 @@ from jobserv_runner.jobserv import JobServApi
 from jobserv_runner.logging import ContextLogger
 
 passed_msg = '''Runner has completed
-          ________
+            _  _
+           | \/ |
+        \__|____|__/
           |  o  o|           Thumbs Up
           |___\/_|_____||_
           |       _____|__|
