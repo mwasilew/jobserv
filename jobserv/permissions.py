@@ -1,6 +1,7 @@
 # Copyright (C) 2017 Linaro Limited
 # Author: Andy Doan <andy.doan@linaro.org>
 import hmac
+import os
 import time
 
 import requests
@@ -9,7 +10,8 @@ from flask import request
 
 from jobserv.models import Project
 from jobserv.jsend import ApiError
-from jobserv.settings import INTERNAL_API_KEY
+
+INTERNAL_API_KEY = os.environ.get('INTERNAL_API_KEY', '').encode()
 
 
 def projects_list():
