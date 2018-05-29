@@ -5,7 +5,7 @@ import json
 
 from unittest.mock import patch
 
-from jobserv.internal_requests import _sign
+from jobserv.permissions import _sign
 from jobserv.models import Build, BuildStatus, Project, Run, Test, db
 
 from tests import JobServTest

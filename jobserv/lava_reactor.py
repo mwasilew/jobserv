@@ -14,7 +14,7 @@ import pytz
 import requests
 import yaml
 
-from jobserv.internal_requests import signed_get
+from jobserv.permissions import internal_get
 from jobserv.settings import LAVA_URLBASE
 
 FINISHED_JOB_STATUS = ["Complete", "Incomplete", "Canceled"]
@@ -123,7 +123,7 @@ def _reap():
     log.debug('looking for stale runs')
     now = datetime.datetime.utcnow().replace(tzinfo=pytz.utc)
 
-    r = signed_get('http://lci-web/incomplete_tests/')
+    r = internal_get('http://lci-web/incomplete_tests/')
     if r.status_code == 200:
         data = r.json()['data']
         for test in data['tests']:

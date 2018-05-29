@@ -5,7 +5,7 @@ import json
 
 from flask_testing import TestCase
 
-from jobserv import internal_requests, permissions, settings
+from jobserv import permissions, settings
 from jobserv.jsend import _status_str
 from jobserv.models import db, Project
 from jobserv.flask import create_app
@@ -18,7 +18,6 @@ class JobServTest(TestCase):
         settings.SQLALCHEMY_DATABASE_URI = 'sqlite://'
         settings.PRESERVE_CONTEXT_ON_EXCEPTION = False
         permissions.INTERNAL_API_KEY = 'just for testing'.encode()
-        internal_requests.INTERNAL_API_KEY = permissions.INTERNAL_API_KEY
         return create_app(settings)
 
     def setUp(self):
@@ -50,5 +49,5 @@ class JobServTest(TestCase):
         if not url.startswith('http://'):
             # signed url handling requires complete url
             url = 'http://localhost' + url
-        internal_requests._sign(url, headers, 'GET')
+        permissions._sign(url, headers, 'GET')
         return self.get_json(url, status_code, query_string, headers)

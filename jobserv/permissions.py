@@ -1,6 +1,9 @@
 # Copyright (C) 2017 Linaro Limited
 # Author: Andy Doan <andy.doan@linaro.org>
 import hmac
+import time
+
+import requests
 
 from flask import request
 
@@ -45,3 +48,20 @@ def assert_internal_user():
     computed = hmac.new(INTERNAL_API_KEY, msg.encode(), 'sha1').hexdigest()
     if not hmac.compare_digest(sig, computed):
         raise ApiError(401, 'Invalid signature')
+
+
+def _sign(url, headers, method):
+    headers['X-Time'] = str(round(time.time()))
+    msg = '%s,%s,%s' % (method, headers['X-Time'], url)
+    sig = hmac.new(INTERNAL_API_KEY, msg.encode(), 'sha1').hexdigest()
+    headers['X-JobServ-Sig'] = sig
+
+
+def internal_get(url, *args, **kwargs):
+    _sign(url, kwargs.setdefault('headers', {}), 'GET')
+    return requests.get(url, *args, **kwargs)
+
+
+def internal_post(url, *args, **kwargs):
+    _sign(url, kwargs.setdefault('headers', {}), 'POST')
+    return requests.post(url, *args, **kwargs)
