@@ -8,7 +8,7 @@ from jobserv.jsend import (
     ApiError, get_or_404, jsendify, paginate, paginate_custom
 )
 from jobserv.models import Build, BuildStatus, Project, db
-from jobserv.permissions import assert_internal_user
+from jobserv.permissions import assert_can_promote, assert_internal_user
 from jobserv.trigger import trigger_build
 
 blueprint = Blueprint(
@@ -70,7 +70,7 @@ def build_get_latest(proj):
 
 @blueprint.route('/builds/<int:build_id>/promote', methods=('POST',))
 def build_promote(proj, build_id):
-    assert_internal_user()
+    assert_can_promote(proj, build_id)
     p = get_or_404(Project.query.filter_by(name=proj))
     b = get_or_404(Build.query.filter_by(project=p, build_id=build_id))
 

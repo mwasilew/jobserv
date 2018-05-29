@@ -52,6 +52,11 @@ def assert_internal_user():
         raise ApiError(401, 'Invalid signature')
 
 
+def assert_can_promote(project, build_id):
+    '''Is the requestor allowed to promote this build.'''
+    assert_internal_user()
+
+
 def _sign(url, headers, method):
     headers['X-Time'] = str(round(time.time()))
     msg = '%s,%s,%s' % (method, headers['X-Time'], url)
