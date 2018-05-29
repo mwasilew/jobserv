@@ -10,8 +10,10 @@ from flask import Blueprint, request, send_file, url_for
 
 from jobserv.jsend import get_or_404
 from jobserv.models import Build, Project, Run
-from jobserv.settings import INTERNAL_API_KEY, LOCAL_ARTIFACTS_DIR
+from jobserv.settings import LOCAL_ARTIFACTS_DIR
 from jobserv.storage.base import BaseStorage
+
+SIGNING_KEY = os.environ.get('LOCAL_STORAGE_KEY', '').encode()
 
 
 blueprint = Blueprint('local_storage', __name__, url_prefix='/local-storage')
@@ -72,9 +74,11 @@ class Storage(BaseStorage):
             return 'File not found', 404
 
     def _generate_put_url(self, run, path, expiration, content_type):
+        if not SIGNING_KEY:
+            raise RuntimeError('JobServ missing LOCAL_STORAGE_KEY')
         p = os.path.join(self.artifacts, self._get_run_path(run), path)
         msg = '%s,%s,%s' % ('PUT', p, content_type)
-        sig = hmac.new(INTERNAL_API_KEY, msg.encode(), 'sha1').hexdigest()
+        sig = hmac.new(SIGNING_KEY, msg.encode(), 'sha1').hexdigest()
         return url_for(
             'local_storage.run_upload_artifact', sig=sig,
             proj=run.build.project.name, build_id=run.build.build_id,
@@ -95,13 +99,15 @@ def _get_run(proj, build_id, run):
     '/<sig>/<project:proj>/builds/<int:build_id>/runs/<run>/<path:path>',
     methods=('PUT',))
 def run_upload_artifact(sig, proj, build_id, run, path):
+    if not SIGNING_KEY:
+        raise RuntimeError('JobServ missing LOCAL_STORAGE_KEY')
     run = _get_run(proj, build_id, run)
 
     # validate the signature
     ls = Storage()
     p = os.path.join(ls.artifacts, ls._get_run_path(run), path)
     msg = '%s,%s,%s' % (request.method, p, request.headers.get('Content-Type'))
-    computed = hmac.new(INTERNAL_API_KEY, msg.encode(), 'sha1').hexdigest()
+    computed = hmac.new(SIGNING_KEY, msg.encode(), 'sha1').hexdigest()
     if not hmac.compare_digest(sig, computed):
         return 'Invalid signature', 401
 

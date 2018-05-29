@@ -9,6 +9,7 @@ from jobserv import permissions, settings
 from jobserv.jsend import _status_str
 from jobserv.models import db, Project
 from jobserv.flask import create_app
+from jobserv.storage import local_storage
 
 
 class JobServTest(TestCase):
@@ -18,6 +19,7 @@ class JobServTest(TestCase):
         settings.SQLALCHEMY_DATABASE_URI = 'sqlite://'
         settings.PRESERVE_CONTEXT_ON_EXCEPTION = False
         permissions.INTERNAL_API_KEY = 'just for testing'.encode()
+        local_storage.SIGNING_KEY = permissions.INTERNAL_API_KEY
         return create_app(settings)
 
     def setUp(self):
