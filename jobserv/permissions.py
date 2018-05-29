@@ -1,8 +1,12 @@
 # Copyright (C) 2017 Linaro Limited
 # Author: Andy Doan <andy.doan@linaro.org>
+import hmac
 
+from flask import request
 
 from jobserv.models import Project
+from jobserv.jsend import ApiError
+from jobserv.settings import INTERNAL_API_KEY
 
 
 def projects_list():
@@ -23,3 +27,21 @@ def run_can_access_secrets(run):
 def health_can_access(health_path):
     '''Allow anyone to access to the health endpoints.'''
     return True
+
+
+def assert_internal_user():
+    '''A function that checks request headers to ensure the caller is a valid
+       internal user.'''
+    if not INTERNAL_API_KEY:
+        raise RuntimeError('JobServ missing INTERNAL_API_KEY')
+
+    sig = request.headers.get('X-JobServ-Sig')
+    ts = request.headers.get('X-Time')
+    if not sig:
+        raise ApiError(401, 'X-JobServ-Sig not provided')
+    if not ts:
+        raise ApiError(401, 'X-Time not provided')
+    msg = '%s,%s,%s' % (request.method, ts, request.base_url)
+    computed = hmac.new(INTERNAL_API_KEY, msg.encode(), 'sha1').hexdigest()
+    if not hmac.compare_digest(sig, computed):
+        raise ApiError(401, 'Invalid signature')

@@ -3,16 +3,16 @@
 
 from flask import Blueprint, request
 
-from jobserv.internal_requests import internal_api
 from jobserv.jsend import ApiError, jsendify
 from jobserv.models import BuildStatus, Test
+from jobserv.permissions import assert_internal_user
 
 blueprint = Blueprint('api_test_query', __name__, url_prefix='/')
 
 
 @blueprint.route('find_test/', methods=('GET',))
-@internal_api
 def test_find():
+    assert_internal_user()
     context = request.args.get('context')
     if not context:
         raise ApiError(401, {'message': 'Missing "context" query argument'})
@@ -26,8 +26,8 @@ def test_find():
 
 
 @blueprint.route('incomplete_tests/', methods=('GET',))
-@internal_api
 def test_incomplete_list():
+    assert_internal_user()
     tests = []
     complete = (BuildStatus.PASSED, BuildStatus.FAILED)
     for t in Test.query.filter(~Test.status.in_(complete)):

@@ -3,17 +3,17 @@
 
 from flask import Blueprint, request
 
-from jobserv.internal_requests import internal_api
 from jobserv.jsend import jsendify
 from jobserv.models import ProjectTrigger, TriggerTypes
+from jobserv.permissions import assert_internal_user
 
 blueprint = Blueprint(
     'api_project_triggers', __name__, url_prefix='/project-triggers')
 
 
 @blueprint.route('/', methods=('GET',))
-@internal_api
 def project_trigger_list():
+    assert_internal_user()
     t = request.args.get('type')
     if t:
         t = TriggerTypes[t].value

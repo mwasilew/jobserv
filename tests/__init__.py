@@ -5,7 +5,7 @@ import json
 
 from flask_testing import TestCase
 
-from jobserv import internal_requests, settings
+from jobserv import internal_requests, permissions, settings
 from jobserv.jsend import _status_str
 from jobserv.models import db, Project
 from jobserv.flask import create_app
@@ -17,7 +17,8 @@ class JobServTest(TestCase):
         settings.TESTING = True
         settings.SQLALCHEMY_DATABASE_URI = 'sqlite://'
         settings.PRESERVE_CONTEXT_ON_EXCEPTION = False
-        internal_requests.INTERNAL_API_KEY = 'just for testing'.encode()
+        permissions.INTERNAL_API_KEY = 'just for testing'.encode()
+        internal_requests.INTERNAL_API_KEY = permissions.INTERNAL_API_KEY
         return create_app(settings)
 
     def setUp(self):

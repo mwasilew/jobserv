@@ -35,7 +35,7 @@ class ProjectConverter(UnicodeConverter):
 
 
 def _user_has_permission():
-    # These are secured by "authenticate_runner" and "@internal_api"
+    # These are secured by "authenticate_runner" and "assert_internal_user"
     if request.method in ('POST', 'PATCH', 'PUT'):
         return
 

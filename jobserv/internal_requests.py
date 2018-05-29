@@ -1,14 +1,10 @@
 # Copyright (C) 2017 Linaro Limited
 # Author: Andy Doan <andy.doan@linaro.org>
 
-import functools
 import hmac
 import requests
 import time
 
-from flask import request
-
-from jobserv.jsend import jsendify
 from jobserv.settings import INTERNAL_API_KEY
 
 
@@ -29,23 +25,3 @@ def signed_post(url, *args, **kwargs):
     # ensuring internal access
     _sign(url, kwargs.setdefault('headers', {}), 'POST')
     return requests.post(url, *args, **kwargs)
-
-
-def internal_api(f):
-    @functools.wraps(f)
-    def wrapper(*args, **kwargs):
-        if not INTERNAL_API_KEY:
-            raise RuntimeError('JobServ missing INTERNAL_API_KEY')
-
-        sig = request.headers.get('X-JobServ-Sig')
-        ts = request.headers.get('X-Time')
-        if not sig:
-            return jsendify('X-JobServ-Sig not provided', 401)
-        if not ts:
-            return jsendify('X-Time not provided', 401)
-        msg = '%s,%s,%s' % (request.method, ts, request.base_url)
-        computed = hmac.new(INTERNAL_API_KEY, msg.encode(), 'sha1').hexdigest()
-        if not hmac.compare_digest(sig, computed):
-            return jsendify('Invalid signature', 401)
-        return f(*args, **kwargs)
-    return wrapper

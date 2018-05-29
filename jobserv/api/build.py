@@ -4,11 +4,11 @@
 from flask import Blueprint, request, url_for
 
 from jobserv.storage import Storage
-from jobserv.internal_requests import internal_api
 from jobserv.jsend import (
     ApiError, get_or_404, jsendify, paginate, paginate_custom
 )
 from jobserv.models import Build, BuildStatus, Project, db
+from jobserv.permissions import assert_internal_user
 from jobserv.trigger import trigger_build
 
 blueprint = Blueprint(
@@ -23,8 +23,8 @@ def build_list(proj):
 
 
 @blueprint.route('/builds/', methods=('POST',))
-@internal_api
 def build_create(proj):
+    assert_internal_user()
     p = Project.query.filter(Project.name == proj).first_or_404()
     d = request.get_json() or {}
     b = trigger_build(p, d.get('reason'), d.get('trigger-name'),
@@ -69,8 +69,8 @@ def build_get_latest(proj):
 
 
 @blueprint.route('/builds/<int:build_id>/promote', methods=('POST',))
-@internal_api
 def build_promote(proj, build_id):
+    assert_internal_user()
     p = get_or_404(Project.query.filter_by(name=proj))
     b = get_or_404(Build.query.filter_by(project=p, build_id=build_id))
 
