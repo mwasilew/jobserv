@@ -11,7 +11,7 @@ import yaml
 
 from requests.auth import HTTPBasicAuth
 
-from jobserv.internal_requests import signed_get, signed_post
+from jobserv.permissions import internal_get, internal_post
 from jobserv.project import ProjectDefinition
 from jobserv.settings import GIT_POLLER_INTERVAL
 from jobserv.storage import Storage
@@ -27,8 +27,8 @@ _projects = {}
 
 
 def _get_projects():
-    resp = signed_get('http://lci-web/project-triggers/',
-                      params={'type': 'git_poller'})
+    resp = internal_get('http://lci-web/project-triggers/',
+                        params={'type': 'git_poller'})
     if resp.status_code != 200:
         log.error('Unable to get projects from front-end: %d %s',
                   resp.status_code, resp.text)
@@ -185,7 +185,7 @@ def _trigger(name, proj, projdef, trigger_name, change_params):
         data['reason'] += '\n' + _github_log(proj, change_params)
     log.debug('Data for build is: %r', data)
     url = 'http://lci-web/projects/%s/builds/' % name
-    resp = signed_post(url, json=data)
+    resp = internal_post(url, json=data)
     if resp.status_code != 201:
         log.error('Error creating build(%s): %d - %s',
                   name, resp.status_code, resp.text)

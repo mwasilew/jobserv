@@ -31,8 +31,6 @@ STORAGE_BACKEND = os.environ.get(
 # JobServ will enter surge support mode and use surge workers for QUEUED run.
 SURGE_SUPPORT_RATIO = int(os.environ.get('SURGE_SUPPORT_RATIO', '3'))
 
-INTERNAL_API_KEY = os.environ.get('INTERNAL_API_KEY', '').encode()
-
 # Allow this to be deployed in a way that builds and runs can provide links
 # to a custom web frontend
 BUILD_URL_FMT = os.environ.get('BUILD_URL_FMT')
