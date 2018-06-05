@@ -50,7 +50,7 @@ def worker_authenticated(f):
 
 @blueprint.route('workers/', methods=('GET',))
 def worker_list():
-    return paginate('workers', Worker.query)
+    return paginate('workers', Worker.query.filter_by(deleted=False))
 
 
 def _fix_run_urls(rundef):
@@ -124,7 +124,7 @@ def worker_create(name):
 @blueprint.route('workers/<name>/', methods=['PATCH'])
 @worker_authenticated
 def worker_update(name):
-    w = get_or_404(Worker.query.filter_by(name=name))
+    w = get_or_404(Worker.query.filter_by(name=name, deleted=False))
     data = request.get_json() or {}
     attrs = ('distro', 'mem_total', 'cpu_total', 'cpu_type',
              'concurrent_runs', 'host_tags')
@@ -139,7 +139,7 @@ def worker_update(name):
 @blueprint.route('workers/<name>/events/', methods=['POST'])
 @worker_authenticated
 def worker_event(name):
-    w = get_or_404(Worker.query.filter_by(name=name))
+    w = get_or_404(Worker.query.filter_by(name=name, deleted=False))
     if not w.enlisted:
         return jsendify({}, 403)
     payload = request.get_json()
