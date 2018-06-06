@@ -25,6 +25,8 @@ services:
       FLASK_AUTO_MIGRATE: /data/ci_jobs/.flask-db-migrate.lock
       STORAGE_BACKEND: jobserv.storage.local_storage
       INTERNAL_API_KEY: ThisIsNotSecure
+      # see https://cryptography.io/en/latest/fernet/ for generation steps
+      SECRETS_FERNET_KEY: SYQI51hPWmH_YLRtAjj6FjKxxytmWtSMeX0WaRBLtc4=
     volumes:
       - artifacts:/data
     command: "/srv/jobserv/wait-for db:3306 -- /srv/jobserv/docker_run.sh"

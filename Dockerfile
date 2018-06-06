@@ -10,11 +10,11 @@ ENV FLASK_APP=jobserv.app:app
 RUN mkdir -p $APPDIR
 COPY ./ $APPDIR/
 
-RUN apk --no-cache add python3 py3-pip mysql-client python3-dev musl-dev gcc && \
+RUN apk --no-cache add python3 py3-pip mysql-client python3-dev musl-dev gcc openssl libffi-dev openssl-dev && \
 	pip3 install --upgrade pip setuptools && \
 	pip3 install -r $APPDIR/requirements.txt && \
 	cd $APPDIR/runner && python3 ./setup.py bdist_wheel && \
-	apk del python3-dev musl-dev gcc
+	apk del python3-dev musl-dev gcc libffi-dev openssl-dev
 
 WORKDIR $APPDIR
 EXPOSE 8000

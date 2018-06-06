@@ -6,6 +6,10 @@ import hashlib
 
 DEBUG = 1
 
+# This key is used to encrypt ProjectTrigger.secrets values
+# see https://cryptography.io/en/latest/fernet/ for generation steps
+SECRETS_FERNET_KEY = os.environ.get('SECRETS_FERNET_KEY')
+
 SQLALCHEMY_TRACK_MODIFICATIONS = False
 _fmt = os.environ.get('SQLALCHEMY_DATABASE_URI_FMT')
 if _fmt:
