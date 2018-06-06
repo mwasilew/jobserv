@@ -115,3 +115,9 @@ class TestWorkerMonitor(JobServTest):
         _check_queue()
         self.assertTrue(os.path.exists(jobserv.worker.SURGE_FILE + '-amd64'))
         self.assertFalse(os.path.exists(jobserv.worker.SURGE_FILE + '-armhf'))
+
+        # make sure we know about deleted workers
+        worker.deleted = True
+        db.session.commit()
+        _check_queue()
+        self.assertTrue(os.path.exists(jobserv.worker.SURGE_FILE + '-armhf'))

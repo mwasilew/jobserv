@@ -63,7 +63,7 @@ def _check_worker(w):
 
 
 def _check_workers():
-    for w in Worker.query.filter(Worker.enlisted == 1):
+    for w in Worker.query.filter(Worker.enlisted == 1, Worker.deleted == 0):
         _check_worker(w)
     db.session.commit()
 
@@ -83,7 +83,8 @@ def _check_queue():
     workers = Worker.query.filter(
         Worker.enlisted == True,  # NOQA (flake8 doesn't like == True)
         Worker.online == True,
-        Worker.surges_only == False
+        Worker.surges_only == False,
+        Worker.deleted == False,
     )
     hosts = {}
     for w in workers:

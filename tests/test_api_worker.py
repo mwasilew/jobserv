@@ -23,7 +23,8 @@ class WorkerAPITest(JobServTest):
 
     def test_worker_list(self):
         db.session.add(Worker('w1', 'ubuntu', 12, 2, 'aarch64', 'key', 2, []))
-        db.session.add(Worker('w2', 'fedora', 14, 4, 'amd64', 'key', 2, []))
+        w = Worker('w2', 'fedora', 14, 4, 'amd64', 'key', 2, [])
+        db.session.add(w)
         db.session.commit()
         data = self.get_json('/workers/')
         self.assertEqual(2, len(data['workers']))
@@ -31,6 +32,12 @@ class WorkerAPITest(JobServTest):
         self.assertEqual(False, data['workers'][0]['enlisted'])
         self.assertEqual('w2', data['workers'][1]['name'])
         self.assertEqual(False, data['workers'][1]['enlisted'])
+
+        w.deleted = True
+        db.session.commit()
+        data = self.get_json('/workers/')
+        self.assertEqual(1, len(data['workers']))
+        self.assertEqual('w1', data['workers'][0]['name'])
 
     def test_worker_get(self):
         db.session.add(Worker('w1', 'ubuntu', 12, 2, 'aarch64', 'key', 2, []))
@@ -80,6 +87,12 @@ class WorkerAPITest(JobServTest):
         with open(p) as f:
             buf = f.read()
             self.assertEqual(event, buf)
+
+        w.deleted = True
+        db.session.commit()
+        resp = self.client.post(
+            '/workers/w1/events/', headers=headers, data=event)
+        self.assertEqual(404, resp.status_code, resp.data)
 
     @patch('jobserv.api.worker.Storage')
     def test_worker_get_run(self, storage):
@@ -209,7 +222,8 @@ class WorkerAPITest(JobServTest):
             ('Content-type', 'application/json'),
             ('Authorization', 'Token key'),
         ]
-        db.session.add(Worker('w1', 'ubuntu', 12, 2, 'aarch64', 'key', 2, []))
+        w = Worker('w1', 'ubuntu', 12, 2, 'aarch64', 'key', 2, [])
+        db.session.add(w)
         db.session.commit()
         data = {'distro': 'ArchLinux'}
         r = self.client.patch(
@@ -218,3 +232,9 @@ class WorkerAPITest(JobServTest):
 
         data = self.get_json('/workers/w1/')
         self.assertEqual('ArchLinux', data['worker']['distro'])
+
+        w.deleted = True
+        db.session.commit()
+        r = self.client.patch(
+            '/workers/w1/', headers=headers, data=json.dumps(data))
+        self.assertEqual(404, r.status_code)

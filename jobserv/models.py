@@ -545,6 +545,10 @@ class Worker(db.Model):
     online = db.Column(db.Boolean)
     surges_only = db.Column(db.Boolean, default=False)
 
+    # we can't delete workers because the Run has foreign keys to them. This
+    # flag allows us to exclude them from the api
+    deleted = db.Column(db.Boolean, default=False, nullable=False)
+
     def __init__(self, name, distro, mem_total, cpu_total, cpu_type, api_key,
                  concurrent_runs, host_tags):
         self.name = name
@@ -592,7 +596,7 @@ class Worker(db.Model):
     @property
     def available(self):
         '''Returns True if the worker should be able to accept runs.'''
-        if self.enlisted:
+        if self.enlisted and not self.deleted:
             if not self.surges_only or self.in_queue_surge():
                 return True
         return False
