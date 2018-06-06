@@ -2,7 +2,6 @@
 # Author: Andy Doan <andy.doan@linaro.org>
 
 import hmac
-import json
 import logging
 import time
 import traceback
@@ -121,8 +120,7 @@ def _update_pr(build, status_url, token):
 
 
 def _validate_payload(trigger):
-    secrets = json.loads(trigger.secrets)
-    key = secrets.get('webhook-key')
+    key = trigger.secret_data.get('webhook-key')
     if not key:
         raise ApiError(403, 'Trigger has no webhook-key secret defined')
 
@@ -170,7 +168,7 @@ def on_webhook(proj):
         repo = data['pull_request']['base']['repo']['full_name']
 
     reason = 'GitHub PR(%s): %s' % (pr_num, event)
-    secrets = json.loads(trigger.secrets)
+    secrets = trigger.secret_data
     token = secrets['githubtok']
     owner, repo = repo.split('/')
     params = _get_params(owner, repo, pr_num, token)
