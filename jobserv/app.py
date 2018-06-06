@@ -183,20 +183,19 @@ def project_update_trigger(project, user, type, secrets=None,
         click.echo('Updating defintion_file')
         t.definition_file = definition_file
 
-    stored_secrets = json.loads(t.secrets)
     for secret in (secrets or []):
         k, v = secret.split('=', 1)
-        if k in stored_secrets:
+        if k in t.secret_data:
             if not v:
                 click.echo('Removing secret: %s' % k)
-                del stored_secrets[k]
-            elif v != stored_secrets[k]:
+                del t.secret_data[k]
+            elif v != t.secret_data[k]:
                 click.echo('Updating secret: %s' % k)
-                stored_secrets[k] = v
+                t.secret_data[k] = v
         else:
             click.echo('Adding new secret: %s' % k)
-            stored_secrets[k] = v
-    t.secrets = json.dumps(stored_secrets)
+            t.secret_data[k] = v
+    t.update_secrets()
     db.session.commit()
 
 

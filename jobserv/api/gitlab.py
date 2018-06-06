@@ -2,7 +2,6 @@
 # Author: Andy Doan <andy.doan@linaro.org>
 
 import hmac
-import json
 import traceback
 import yaml
 
@@ -139,8 +138,7 @@ def _update_pr(build, status_url, token):
 
 
 def _validate_payload(trigger):
-    secrets = json.loads(trigger.secrets)
-    key = secrets.get('webhook-key')
+    key = trigger.secret_data.get('webhook-key')
     if not key:
         raise ApiError(403, 'Trigger has no webhook-key secret defined')
 
@@ -178,7 +176,7 @@ def on_webhook(proj):
     params = _get_params(data)
 
     reason = 'GitLab MR: ' + params['GL_MR']
-    secrets = json.loads(trigger.secrets)
+    secrets = trigger.secret_data
     if 'gitlabtok' not in secrets or 'gitlabuser' not in secrets:
         raise ApiError(
             400, 'Trigger secrets is missing "gitlabtok" or "gitlabuser"')

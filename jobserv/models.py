@@ -68,6 +68,7 @@ class Project(db.Model):
     name = db.Column(db.String(80), unique=True)
 
     builds = db.relationship('Build', order_by='-Build.id')
+    triggers = db.relationship('ProjectTrigger')
 
     def __init__(self, name=None):
         self.name = name
@@ -115,7 +116,8 @@ class ProjectTrigger(db.Model):
         self.proj_id = project.id
         self.definition_repo = def_repo
         self.definition_file = def_file
-        self.secrets = json.dumps(secrets)
+        self._secret_data = secrets
+        self.update_secrets()
 
     def as_json(self):
         return {
@@ -124,8 +126,25 @@ class ProjectTrigger(db.Model):
             'project': self.project.name,
             'definition_repo': self.definition_repo,
             'definition_file': self.definition_file or None,
-            'secrets': json.loads(self.secrets or '{}'),
+            'secrets': self.secret_data,
         }
+
+    @property
+    def secret_data(self):
+        try:
+            return self._secret_data
+        except AttributeError:
+            self._secret_data = json.loads(self.secrets or '{}')
+            return self._secret_data
+
+    def update_secrets(self):
+        assert type(self._secret_data) == dict
+        for k, v in self._secret_data.items():
+            if type(k) != str:
+                raise ValueError('Invalid secret name: %r' % k)
+            if type(v) != str:
+                raise ValueError('Invalid secret value(%s): %r' % (k, v))
+        self.secrets = json.dumps(self._secret_data)
 
     def __repr__(self):
         return '<Trigger %s: %s>' % (
