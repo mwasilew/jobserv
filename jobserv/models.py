@@ -68,6 +68,7 @@ class Project(db.Model):
     name = db.Column(db.String(80), unique=True)
 
     builds = db.relationship('Build', order_by='-Build.id')
+    triggers = db.relationship('ProjectTrigger')
 
     def __init__(self, name=None):
         self.name = name
