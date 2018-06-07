@@ -14,12 +14,13 @@ import time
 
 import sqlalchemy.dialects.mysql.mysqldb as mysqldb
 
+from cryptography.fernet import Fernet
 from flask import url_for
 from flask_sqlalchemy import SQLAlchemy
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.hybrid import Comparator, hybrid_property
 
-from jobserv.settings import JOBS_DIR, WORKER_DIR
+from jobserv.settings import JOBS_DIR, SECRETS_FERNET_KEY, WORKER_DIR
 from jobserv.stats import StatsClient
 
 db = SQLAlchemy()
@@ -110,6 +111,8 @@ class ProjectTrigger(db.Model):
 
     project = db.relationship(Project)
 
+    fernet = None
+
     def __init__(self, user, ttype, project, def_repo, def_file, secrets):
         self.user = user
         self.type = ttype
@@ -129,12 +132,22 @@ class ProjectTrigger(db.Model):
             'secrets': self.secret_data,
         }
 
+    @classmethod
+    def _init_fernet(clazz):
+        if not clazz.fernet:
+            if not SECRETS_FERNET_KEY:
+                raise ValueError(
+                    'Missing environment value: SECRETS_FERNET_KEY')
+            clazz.fernet = Fernet(SECRETS_FERNET_KEY.encode())
+
     @property
     def secret_data(self):
+        self._init_fernet()
         try:
             return self._secret_data
         except AttributeError:
-            self._secret_data = json.loads(self.secrets or '{}')
+            s = self.fernet.decrypt(self.secrets.encode()).decode()
+            self._secret_data = json.loads(s or '{}')
             return self._secret_data
 
     def update_secrets(self):
@@ -144,7 +157,10 @@ class ProjectTrigger(db.Model):
                 raise ValueError('Invalid secret name: %r' % k)
             if type(v) != str:
                 raise ValueError('Invalid secret value(%s): %r' % (k, v))
-        self.secrets = json.dumps(self._secret_data)
+        self._init_fernet()
+        self.secrets = self.fernet.encrypt(
+            json.dumps(self._secret_data).encode()
+        ).decode()
 
     def __repr__(self):
         return '<Trigger %s: %s>' % (

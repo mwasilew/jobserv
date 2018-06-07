@@ -12,3 +12,4 @@ pykwalify==1.6.0
 python-dateutil==2.6.0
 pytz==2017.2
 setproctitle==1.1.10
+cryptography==2.2.2

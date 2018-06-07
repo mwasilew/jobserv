@@ -3,11 +3,12 @@
 
 import json
 
+from cryptography.fernet import Fernet
 from flask_testing import TestCase
 
 from jobserv import permissions, settings
 from jobserv.jsend import _status_str
-from jobserv.models import db, Project
+from jobserv.models import db, Project, ProjectTrigger
 from jobserv.flask import create_app
 from jobserv.storage import local_storage
 
@@ -18,6 +19,7 @@ class JobServTest(TestCase):
         settings.TESTING = True
         settings.SQLALCHEMY_DATABASE_URI = 'sqlite://'
         settings.PRESERVE_CONTEXT_ON_EXCEPTION = False
+        ProjectTrigger.fernet = Fernet(Fernet.generate_key())
         permissions.INTERNAL_API_KEY = 'just for testing'.encode()
         local_storage.SIGNING_KEY = permissions.INTERNAL_API_KEY
         return create_app(settings)
