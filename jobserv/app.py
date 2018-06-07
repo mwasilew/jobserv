@@ -220,8 +220,9 @@ def worker_enlist(name):
 
 
 @app.cli.command('backup')
+@click.option('--keep-local', is_flag=True)
 @email_on_exception('jobserv: DB Backup Failed')
-def backup():
+def backup(keep_local=False):
     command = (
         'mysqldump',
         '--user=' + db.engine.url.username,
@@ -236,7 +237,8 @@ def backup():
 
     Storage()._create_from_file(
         'backups/' + os.path.basename(backup), backup, 'application/x-sql')
-    os.unlink(backup)
+    if not keep_local:
+        os.unlink(backup)
 
 
 @app.cli.command('run-status')
