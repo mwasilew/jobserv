@@ -5,6 +5,9 @@ import json
 
 from unittest.mock import patch
 
+from jobserv.models import Project
+from jobserv.permissions import _sign
+
 from tests import JobServTest
 
 
@@ -36,3 +39,16 @@ class ProjectAPITest(JobServTest):
         self.create_projects('job-1')
         r = self.client.get('/projects/job-1/')
         self.assertEqual(404, r.status_code)
+
+    def test_project_create_denied(self):
+        r = self.client.post('/projects/', data=json.dumps({'name': 'foo'}))
+        self.assertEqual(401, r.status_code)
+
+    def test_project_create(self):
+        url = 'http://localhost/projects/'
+        headers = {'Content-type': 'application/json'}
+        _sign(url, headers, 'POST')
+        r = self.client.post(
+            url, headers=headers, data=json.dumps({'name': 'foo'}))
+        self.assertEqual(201, r.status_code, r.data)
+        Project.query.filter(Project.name == 'foo').one()
