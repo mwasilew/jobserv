@@ -94,10 +94,10 @@ def _register_github_hook(project, url, api_token, hook_token, server_name):
             'pull_request_review_comment',
             'issue_comment',
         ],
-        'secret': hook_token,
         'config': {
             'url': 'https://%s/github/%s/' % (server_name, project),
             'content_type': 'json',
+            'secret': hook_token,
         }
     }
     headers = {
