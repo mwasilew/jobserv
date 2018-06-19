@@ -324,6 +324,7 @@ def _handle_reboot(rundir, rundef, cold):
         shutil.rmtree(reboot_run)
 
     os.rename(rundir, reboot_run)
+    os.sync()
     if cold:
         os.execv('/usr/bin/cold-reboot', ['/usr/bin/cold-reboot'])
     os.execv('/usr/bin/reboot', ['/usr/bin/reboot'])
