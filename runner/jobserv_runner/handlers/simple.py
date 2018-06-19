@@ -354,6 +354,10 @@ class SimpleHandler(object):
         if not os.path.exists(archive):
             os.mkdir(archive)  # probably a rebooted run
         mounts.append((archive, '/archive'))
+
+        for src, dst in mounts:
+            if not os.path.exists(src):
+                raise HandlerError('Invalid mount path for container: ' + src)
         return mounts
 
     def _on_alarm(self, signum, frame):
