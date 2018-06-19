@@ -310,7 +310,7 @@ def _delete_rundir(rundir):
         log.info(
             'Unable to cleanup Run as normal user, trying sudo rm -rf')
         subprocess.check_call(['sudo', '/bin/rm', '-rf', rundir])
-    except:
+    except Exception:
         log.exception('Unable to delete Run\'s directory: ' + rundir)
         sys.exit(1)
 
