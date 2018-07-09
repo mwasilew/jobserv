@@ -21,7 +21,7 @@ if [ -n "$FLASK_AUTO_MIGRATE" ] ; then
 	create_flock_script
 	echo "Peforming DB migration"
 	mkdir -p $(dirname $FLASK_AUTO_MIGRATE)
-	/tmp/flock $FLASK_AUTO_MIGRATE flask db upgrade
+	/tmp/flock $FLASK_AUTO_MIGRATE flask db upgrade heads
 fi
 
 # if FLASK_DEBUG is defined, we'll run via flask with dynamic reloading of
