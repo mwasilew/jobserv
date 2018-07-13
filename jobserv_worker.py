@@ -362,7 +362,7 @@ def _handle_rebooted_run(jobserv):
         log.warn('Found rebooted-run, preparing to execute')
 
         rundir = os.path.join(os.path.dirname(script), 'runs/rebooted-run')
-        rundir += str(time)
+        rundir += str(time.time())
         os.rename(reboot_run, rundir)
 
         flocks = HostProps.get_available_runners()
