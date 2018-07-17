@@ -430,6 +430,9 @@ def cmd_loop(args):
     with open('/tmp/jobserv_worker.lock', 'w+') as f:
         try:
             fcntl.flock(f, fcntl.LOCK_EX | fcntl.LOCK_NB)
+        except IOError:
+            sys.exit('Script is already running')
+        try:
             next_clean = time.time() + (args.docker_rm * 3600)
             while True:
                 log.debug('Calling check')
@@ -442,8 +445,6 @@ def cmd_loop(args):
                     next_clean = time.time() + (args.docker_rm * 3600)
                 else:
                     time.sleep(args.every)
-        except IOError:
-            sys.exit('Script is already running')
         except KeyboardInterrupt:
             log.info('Keyboard interrupt received, exiting')
             return
