@@ -325,9 +325,12 @@ def _handle_reboot(rundir, rundef, cold):
 
     os.rename(rundir, reboot_run)
     os.sync()
-    if cold:
-        os.execv('/usr/bin/cold-reboot', ['/usr/bin/cold-reboot'])
-    os.execv('/usr/bin/reboot', ['/usr/bin/reboot'])
+    key = 'cold-reboot' if cold else 'reboot'
+    try:
+        cmd = config['tools'][key]
+    except KeyError:
+        cmd = '/usr/bin/' + key
+    os.execv(cmd, [cmd])
 
 
 def _handle_run(jobserv, rundef, rundir=None):
