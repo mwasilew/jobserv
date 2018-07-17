@@ -426,7 +426,10 @@ def _docker_clean():
 
 def cmd_loop(args):
     # Ensure no other copy of this script is running
-    cmd_args = [sys.argv[0], 'check']
+    try:
+        cmd_args = [config['tools']['worker-wrapper'], 'check']
+    except KeyError:
+        cmd_args = [sys.argv[0], 'check']
     with open('/tmp/jobserv_worker.lock', 'w+') as f:
         try:
             fcntl.flock(f, fcntl.LOCK_EX | fcntl.LOCK_NB)
