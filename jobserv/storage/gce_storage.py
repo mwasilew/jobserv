@@ -7,6 +7,7 @@ import logging
 
 from flask import redirect
 from google.cloud import storage
+from google.cloud.exceptions import NotFound
 
 from jobserv.settings import GCE_BUCKET
 from jobserv.storage.base import BaseStorage
@@ -34,7 +35,10 @@ class Storage(BaseStorage):
             b.upload_from_file(f, content_type=content_type)
 
     def _get_raw(self, storage_path):
-        return self.bucket.blob(storage_path).download_as_string()
+        try:
+            return self.bucket.blob(storage_path).download_as_string()
+        except NotFound:
+            raise FileNotFoundError(storage_path)
 
     def _get_as_string(self, storage_path):
         return self._get_raw(storage_path).decode()
