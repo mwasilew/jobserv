@@ -117,8 +117,8 @@ class BaseStorage(object):
         data = {}
         try:
             data = json.loads(self._get_as_string(path))
-        except:
-            log.exception('Error getting poller cache, returning {}')
+        except FileNotFoundError:
+            log.warn('Cache not found, assuming initial run with no data')
 
         try:
             yield data

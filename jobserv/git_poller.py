@@ -250,4 +250,7 @@ def run():
             log.debug('Waiting %d before running again', sleep)
             time.sleep(sleep)
         last_run = time.time()
-        _poll()
+        try:
+            _poll()
+        except Exception:
+            log.exception('Error getting cache, retrying in a bit')
