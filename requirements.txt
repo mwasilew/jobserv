@@ -2,7 +2,7 @@ flask==0.12
 Flask-SQLAlchemy==2.3.2
 Flask-Migrate==2.2.1
 Flask-Testing==0.7.1
-google_cloud_storage==0.22.0
+google_cloud_storage==1.10.0
 gunicorn==19.9.0
 PyYAML==3.13
 requests==2.19.1
