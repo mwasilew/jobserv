@@ -371,6 +371,7 @@ def _handle_rebooted_run(jobserv):
         flocks = HostProps.get_available_runners()
         with open(os.path.join(rundir, 'rundef.json')) as f:
             rundef = json.load(f)
+        log.info('Rebooted run is: %s', rundef['run_url'])
         rundef['flock'] = flocks.pop()
         jobserv.update_run(rundef, 'RUNNING', 'Resuming rebooted run')
         _handle_run(jobserv, rundef, rundir)
@@ -390,7 +391,7 @@ def cmd_check(args):
         # the runner forks since the open file will be referenced
         rundef['flock'] = flocks.pop()
         rundef['env']['H_WORKER'] = config['jobserv']['hostname']
-        log.info('executing run: %s', rundef.get('run_url'))
+        log.info('Executing run: %s', rundef.get('run_url'))
         _handle_run(args.server, rundef)
     ver = data['data']['worker']['version']
     if ver != config['jobserv']['version']:
