@@ -330,7 +330,13 @@ def _handle_reboot(rundir, rundef, cold):
         cmd = config['tools'][key]
     except KeyError:
         cmd = '/usr/bin/' + key
-    os.execv(cmd, [cmd])
+    if os.fork() == 0:
+        os.execv(cmd, [cmd])
+    # we can't just exit here or the worker's "poll" loop might accidentally
+    # pull in another run to handle. So lets sleep for 3 minutes. If we
+    # are still running then the reboot command has failed.
+    time.sleep(180)
+    raise RuntimeError('Failed to reboot system')
 
 
 def _handle_run(jobserv, rundef, rundir=None):
