@@ -204,6 +204,17 @@ def run_update(proj, build_id, run):
     return jsendify({})
 
 
+@blueprint.route('/<run>/rerun', methods=('POST',))
+def run_rerun(proj, build_id, run):
+    r = _get_run(proj, build_id, run)
+    permissions.assert_internal_user()
+    for t in r.tests:
+        db.session.delete(t)
+    r.set_status(BuildStatus.QUEUED)
+    db.session.commit()
+    return jsendify({})
+
+
 @blueprint.route('/<run>/.rundef.json', methods=('GET',))
 def run_get_definition(proj, build_id, run):
     r = _get_run(proj, build_id, run)

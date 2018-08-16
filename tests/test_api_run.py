@@ -9,6 +9,7 @@ import tempfile
 
 from unittest.mock import Mock, patch
 
+from jobserv import permissions
 import jobserv.models
 import jobserv.storage.base
 
@@ -92,6 +93,20 @@ class RunAPITest(JobServTest):
         resp = self.client.post(url, data=data, headers=headers)
         self.assertEqual(status, resp.status_code, resp.data)
         return resp
+
+    def test_run_rerun(self):
+        r = Run(self.build, 'run0')
+        r.status = BuildStatus.FAILED
+        db.session.add(r)
+        db.session.commit()
+
+        url = 'http://localhost' + self.urlbase + 'run0/rerun'
+
+        headers = {}
+        self._post(url, 'message', headers, 401)
+
+        permissions._sign(url, headers, 'POST')
+        self._post(url, 'message', headers, 200)
 
     def test_run_stream_not_authenticated(self):
         r = Run(self.build, 'run0')
