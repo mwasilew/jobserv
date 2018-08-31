@@ -39,3 +39,11 @@ class ProjectTriggerAPITest(JobServTest):
         self.assertEqual(1, len(triggers))
         self.assertEqual('git_poller', triggers[0]['type'])
         self.assertEqual('file', triggers[0]['definition_file'])
+
+        triggers = self.get_signed_json(
+            '/projects/p/triggers/', query_string='type=github_pr')
+        self.assertEqual(1, len(triggers))
+        self.assertEqual('rep0', triggers[0]['definition_repo'])
+
+        r = self.client.get('/projects/p/triggers/')
+        self.assertEqual(401, r.status_code)

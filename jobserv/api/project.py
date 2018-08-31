@@ -5,7 +5,7 @@ from flask import Blueprint, request, url_for
 
 from jobserv.flask import permissions
 from jobserv.jsend import ApiError, get_or_404, jsendify
-from jobserv.models import Project, db
+from jobserv.models import Project, TriggerTypes, db
 
 blueprint = Blueprint('api_project', __name__, url_prefix='/projects')
 
@@ -35,3 +35,15 @@ def project_create():
 def project_get(proj):
     p = get_or_404(Project.query.filter_by(name=proj))
     return jsendify({'project': p.as_json(detailed=True)})
+
+
+@blueprint.route('/<project:proj>/triggers/', methods=('GET',))
+def project_trigger_list(proj):
+    permissions.assert_internal_user()
+    p = get_or_404(Project.query.filter_by(name=proj))
+    triggers = p.triggers
+
+    t = request.args.get('type')
+    if t:
+        triggers = [x for x in triggers if x.type == TriggerTypes[t].value]
+    return jsendify([x.as_json() for x in triggers])
