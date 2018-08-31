@@ -252,8 +252,14 @@ def run_get_artifact(proj, build_id, run, path):
             404, {'message': 'Run in progress, no artifacts available'})
 
     if r.status == BuildStatus.QUEUED:
-        return '', 200, {'Content-Type': 'text/plain'}
-    return send_file(Storage().console_logfd(r, 'rb'), mimetype='text/plain')
+        msg = '# Waiting for worker with tag: ' + run.host_tag
+        return msg, 200, {'Content-Type': 'text/plain'}
+    try:
+        return send_file(
+            Storage().console_logfd(r, 'rb'), mimetype='text/plain')
+    except FileNotFoundError:
+        # This is a race condition. The run completed while we were checking
+        return Storage().get_download_response(request, r, path)
 
 
 @blueprint.route('/<run>/create_signed', methods=('POST',))
