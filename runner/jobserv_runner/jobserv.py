@@ -5,7 +5,6 @@ import datetime
 import json
 import logging
 import mimetypes
-import mmap
 import os
 import time
 import urllib.error
@@ -15,6 +14,8 @@ import urllib.parse
 from http.client import HTTPException
 
 from multiprocessing.pool import ThreadPool
+
+import requests
 
 
 def split(items, group_size):
@@ -117,22 +118,12 @@ class JobServApi(object):
     def _upload_item(self, artifacts_dir, artifact, urldata):
         # http://stackoverflow.com/questions/2502596/
         with open(os.path.join(artifacts_dir, artifact), 'rb') as f:
-            if f.seek(0, 2) == 0:
-                # we have an empty file
-                mapped = b''
-            else:
-                mapped = mmap.mmap(f.fileno(), 0, access=mmap.ACCESS_READ)
             try:
                 headers = {'Content-Type': urldata['content-type']}
-
-                req = urllib.request.Request(
-                    urldata['url'], mapped, headers=headers, method='PUT')
-                urllib.request.urlopen(req)
-            except urllib.error.URLError as e:
-                return 'Unable to upload %s: %s' % (
-                    artifact, urllib_error_str(e))
-            except HTTPException as e:
-                return 'Unable to upload %s: %s' % (artifact, str(e))
+                r = requests.put(urldata['url'], data=f, headers=headers)
+                if r.status_code not in (200, 201):
+                    return 'Unable to upload %s: HTTP_%d\n%s' % (
+                        artifact, r.status_code, r.text)
             except Exception as e:
                 return 'Unexpected error for %s: %s' % (artifact, str(e))
 
