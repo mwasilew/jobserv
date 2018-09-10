@@ -109,7 +109,7 @@ class JobServApi(object):
             try:
                 resp = _post(url, data, headers)
                 return json.loads(resp.read().decode())['data']['urls']
-            except:
+            except Exception:
                 if i == 4:
                     raise
                 logging.exception('Unable to get urls, sleeping and retrying')
