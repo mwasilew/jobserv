@@ -252,7 +252,7 @@ def run_get_artifact(proj, build_id, run, path):
             404, {'message': 'Run in progress, no artifacts available'})
 
     if r.status == BuildStatus.QUEUED:
-        msg = '# Waiting for worker with tag: ' + run.host_tag
+        msg = '# Waiting for worker with tag: ' + r.host_tag
         return msg, 200, {'Content-Type': 'text/plain'}
     try:
         return send_file(
