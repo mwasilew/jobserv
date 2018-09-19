@@ -303,6 +303,15 @@ def _download_runner(url, rundir, retries=3):
             time.sleep(i * 2)
 
 
+def _is_rebooting():
+    return os.path.isfile('/tmp/jobserv_rebooting')
+
+
+def _set_rebooting():
+    with open('/tmp/jobserv_rebooting', 'w') as f:
+        f.write('%d\n' % time.time())
+
+
 def _delete_rundir(rundir):
     try:
         shutil.rmtree(rundir)
@@ -316,6 +325,7 @@ def _delete_rundir(rundir):
 
 
 def _handle_reboot(rundir, rundef, cold):
+    _set_rebooting()
     log.warn('RebootAndContinue(cold=%s) requested by %s',
              cold, rundef['run_url'])
     reboot_run = os.path.join(os.path.dirname(script), 'rebooted-run')
@@ -368,6 +378,9 @@ def _handle_run(jobserv, rundef, rundir=None):
 def _handle_rebooted_run(jobserv):
     reboot_run = os.path.join(os.path.dirname(script), 'rebooted-run')
     if os.path.exists(reboot_run):
+        if _is_rebooting():
+            log.info('Detected a reboot in progress')
+            return True
         log.warn('Found rebooted-run, preparing to execute')
 
         rundir = os.path.join(os.path.dirname(script), 'runs/rebooted-run')
@@ -442,6 +455,9 @@ def cmd_loop(args):
             fcntl.flock(f, fcntl.LOCK_EX | fcntl.LOCK_NB)
         except IOError:
             sys.exit('Script is already running')
+        if _is_rebooting():
+            log.warning('Reboot lock from previous run detected, deleting')
+            os.unlink('/tmp/jobserv_rebooting')
         try:
             next_clean = time.time() + (args.docker_rm * 3600)
             while True:
