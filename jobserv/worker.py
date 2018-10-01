@@ -1,12 +1,16 @@
 # Copyright (C) 2017 Linaro Limited
 # Author: Andy Doan <andy.doan@linaro.org>
 
+import datetime
 import logging
 import os
 import time
 
+import requests
+
 from jobserv.models import db, BuildStatus, Run, Worker, WORKER_DIR
-from jobserv.sendmail import notify_surge_started, notify_surge_ended
+from jobserv.sendmail import (
+    notify_run_terminated, notify_surge_started, notify_surge_ended)
 from jobserv.settings import SURGE_SUPPORT_RATIO
 from jobserv.stats import StatsClient
 
@@ -150,6 +154,39 @@ def _check_queue():
                 c.surge_started(tag)
 
 
+def _update_run(run, status, message):
+    url = 'http://lci-web/projects/%s/builds/%s/runs/%s/' % (
+        run.build.project.name, run.build.build_id, run.name)
+    headers = {
+        'content-type': 'text/plain',
+        'Authorization': 'Token ' + run.api_key,
+        'X-RUN-STATUS': status,
+    }
+    for x in range(3):
+        r = requests.post(url, data=message.encode(), headers=headers)
+        if r.status_code == 200:
+            break
+        log.error('Unable to update run, trying again in 2 seconds')
+        time.sleep(2)
+    else:
+        log.error('Unable to update run: HTTP_%d\n%s', r.status_code, r.text)
+        r.raise_for_status()
+
+
+def _check_stuck():
+    cut_off = datetime.datetime.utcnow() - datetime.timedelta(hours=12)
+    for r in Run.query.filter(Run.status == BuildStatus.RUNNING):
+        if r.status_events[-1].time < cut_off:
+            period = cut_off - r.status_events[-1].time
+            log.error('Found stuck run %s/%s/%s on worker %s',
+                      r.build.project.name, r.build.build_id, r.name, r.worker)
+            m = '\n' + '=' * 72 + '\n'
+            m += 'ERROR: Run appears to be stuck after %s\n' % period
+            m += '=' * 72 + '\n'
+            _update_run(r, status=BuildStatus.FAILED.name, message=m)
+            notify_run_terminated(r, period)
+
+
 def run_monitor_workers():
     log.info('worker monitor has started')
     try:
@@ -158,6 +195,8 @@ def run_monitor_workers():
             _check_workers()
             log.debug('checking queue')
             _check_queue()
+            log.debug('checking stuck jobs')
+            _check_stuck()
             time.sleep(120)  # run every 2 minutes
-    except:
+    except Exception:
         log.exception('unexpected error in run_monitor_workers')

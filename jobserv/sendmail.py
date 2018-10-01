@@ -132,6 +132,20 @@ def notify_build_complete(build, to_list):
     _send(msg)
 
 
+def notify_run_terminated(run, cutoff):
+    msg = 'The run has been terminated after: %s' % cutoff
+    msg = MIMEText(msg)
+    msg['Message-ID'] = make_msgid('jobserv-%s' % run.id)
+    msg['From'] = SMTP_USER
+    msg['Subject'] = 'jobserv: Terminated %s/%s/%s' % (
+        run.build.project.name, run.build.build_id, run.name)
+
+    if NOTIFICATION_EMAILS:
+        msg['To'] = NOTIFICATION_EMAILS
+        _send(msg)
+    return msg['Message-ID']
+
+
 def notify_surge_started(tag):
     msg = MIMEText('Surge workers have been enabled for: ' + tag)
     msg['Message-ID'] = make_msgid('jobserv-' + tag)
