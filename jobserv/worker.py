@@ -176,7 +176,7 @@ def _update_run(run, status, message):
 def _check_stuck():
     cut_off = datetime.datetime.utcnow() - datetime.timedelta(hours=12)
     for r in Run.query.filter(Run.status == BuildStatus.RUNNING):
-        if r.status_events[-1].time < cut_off:
+        if len(r.status_events) > 0 and r.status_events[-1].time < cut_off:
             period = cut_off - r.status_events[-1].time
             log.error('Found stuck run %s/%s/%s on worker %s',
                       r.build.project.name, r.build.build_id, r.name, r.worker)
