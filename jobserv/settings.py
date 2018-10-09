@@ -59,6 +59,10 @@ LAVA_URLBASE = os.environ.get(
 
 # every 90 seconds
 GIT_POLLER_INTERVAL = int(os.environ.get('GIT_POLLER_INTERVAL', '90'))
+GITLAB_SERVERS = [
+    x.strip() for x in
+    os.environ.get('GITLAB_SERVERS', 'https://gitlab.com').split(',')
+]
 
 STATS_CLIENT_MODULE = os.environ.get(
     'STATS_CLIENT_MODULE', 'jobserv.stats.carbon:CarbonClient')

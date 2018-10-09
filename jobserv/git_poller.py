@@ -9,11 +9,13 @@ import time
 import requests
 import yaml
 
+from urllib.parse import quote_plus, urlparse
+
 from requests.auth import HTTPBasicAuth
 
 from jobserv.flask import permissions
 from jobserv.project import ProjectDefinition
-from jobserv.settings import GIT_POLLER_INTERVAL
+from jobserv.settings import GIT_POLLER_INTERVAL, GITLAB_SERVERS
 from jobserv.storage import Storage
 
 logging.basicConfig(
@@ -172,6 +174,37 @@ def _github_log(proj, change_params):
     return gitlog
 
 
+def _gitlab_log(proj, change_params):
+    base = change_params['GIT_OLD_SHA']
+    head = change_params['GIT_SHA']
+    p = urlparse(change_params['GIT_URL'])
+    proj_enc = quote_plus(p.path[1:].replace('.git', ''))
+
+    url = (p.scheme + '://' + p.netloc + '/api/v4/projects/' + proj_enc +
+           '/repository/commits')
+    headers = None
+    tok = proj['poller_def'].get('secrets', {}).get('gitlabtok')
+    if tok:
+        headers = {'PRIVATE-TOKEN': tok}
+    try:
+        r = requests.get(url, headers=headers, params={'ref_name': head})
+    except Exception as e:
+        log.exception('Unable to get %s', url)
+        return 'Unable to get %s\n%s' % (url, str(e))
+
+    gitlog = ''
+    if r.status_code == 200:
+        for commit in r.json():
+            if commit['id'] == base:
+                break
+            gitlog += '%s %s\n' % (
+                commit['short_id'], commit['title'])
+    else:
+        gitlog += 'Unable to get gitlab log(%s): %d %s' % (
+            url, r.status_code, r.text)
+    return gitlog
+
+
 def _trigger(name, proj, projdef, trigger_name, change_params):
     log.info('Trigger build for %s with params: %r', name, change_params)
     data = {
@@ -183,6 +216,9 @@ def _trigger(name, proj, projdef, trigger_name, change_params):
     }
     if change_params['GIT_URL'].startswith('https://github.com'):
         data['reason'] += '\n' + _github_log(proj, change_params)
+    elif change_params['GIT_URL'] in GITLAB_SERVERS:
+        data['reason'] += '\n' + _gitlab_log(proj, change_params)
+
     log.debug('Data for build is: %r', data)
     url = 'http://lci-web/projects/%s/builds/' % name
     resp = permissions.internal_post(url, json=data)
