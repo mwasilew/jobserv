@@ -70,7 +70,7 @@ def _get_projdef(name, proj):
             proj['definition'] = ProjectDefinition(data)
             # allows us to cache the resp
             headers['If-None-Match'] = r.headers['ETAG']
-        except:
+        except Exception:
             log.exception('Validation failed for %s ...skipping', url)
             return None
     elif r.status_code == 304:
