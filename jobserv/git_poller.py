@@ -214,9 +214,11 @@ def _trigger(name, proj, projdef, trigger_name, change_params):
         'project-definition': projdef._data,
         'reason': json.dumps(change_params, indent=2),
     }
-    if change_params['GIT_URL'].startswith('https://github.com'):
+    p = urlparse(change_params['GIT_URL'])
+    url = p.scheme + '://' + p.netloc
+    if url == 'https://github.com':
         data['reason'] += '\n' + _github_log(proj, change_params)
-    elif change_params['GIT_URL'] in GITLAB_SERVERS:
+    elif url in GITLAB_SERVERS:
         data['reason'] += '\n' + _gitlab_log(proj, change_params)
 
     log.debug('Data for build is: %r', data)
