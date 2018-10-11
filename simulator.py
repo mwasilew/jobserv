@@ -110,21 +110,25 @@ def _add_mr_params(params, secrets):
     params['GIT_URL'] = r.json()['http_url_to_repo']
 
 
-def _get_params(projdef, trigger, run, keyvals, secrets):
-    params = {'H_RUN': 'simulator', 'H_BUILD': '42'}
+def _fill_params(projdef, trigger, run, params, secrets):
+    params['H_RUN'] = 'simulator'
+    params['H_BUILD'] = '42'
+
     params.update(projdef.get('params', {}))
     params.update(trigger.get('params', {}))
     params.update(run.get('params', {}))
-
-    for kv in keyvals:
-        k, v = kv.split('=', 1)
-        params[k] = v
 
     if trigger['type'] == 'github_pr':
         _add_pr_params(params, secrets)
     elif trigger['type'] == 'gitlab_mr':
         _add_mr_params(params, secrets)
 
+
+def _get_params(keyvals):
+    params = {}
+    for kv in keyvals:
+        k, v = kv.split('=', 1)
+        params[k] = v
     return params
 
 
@@ -146,6 +150,8 @@ def _create(args):
     trigger = _get_trigger(proj_def, args.trigger_name)
     run = _get_run(trigger, args.run_name)
     secrets = _get_secrets(args.secret)
+    params = _get_params(args.param)
+    _fill_params(proj_def, trigger, run, params, secrets)
 
     rundef = {
         'simulator': True,
@@ -153,7 +159,7 @@ def _create(args):
         'run_url': '',
         'api_key': '',
         'container': run['container'],
-        'env': _get_params(proj_def, trigger, run, args.param, secrets),
+        'env': params,
         'timeout': proj_def['timeout'],
         'secrets': secrets,
     }
