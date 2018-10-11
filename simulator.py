@@ -23,7 +23,7 @@ def _validate(args):
     if r.status_code != 200:
         try:
             sys.exit(r.json()['message'])
-        except:
+        except Exception:
             sys.exit(r.text)
     return data
 
