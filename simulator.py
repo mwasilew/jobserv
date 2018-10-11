@@ -251,6 +251,79 @@ def _test_grep(args):
     print('%d PASSED, %d FAILED' % (passes, failures))
 
 
+def _get_input(items, fmt_item):
+    for i, item in enumerate(items):
+        print('%d. %s' % (i + 1, fmt_item.format(**item)))
+    try:
+        selection = int(input('Enter your selection: ')) - 1
+        return items[selection]
+    except (ValueError, IndexError):
+        sys.exit('Invalid selection')
+
+
+def _wizard_loop_params(run, params):
+    for item in run['loop-on']:
+        print('= Pick a value for %s' % item['param'])
+        values = [{'name': x} for x in item['values']]
+        params[item['param']] = _get_input(values, '{name}')['name']
+
+
+def _wizard_registry_auth(proj_def, run, secrets):
+    name = run['script-repo']['name']
+    repo = proj_def['script-repos'][name]
+    token = repo.get('token')
+    if token:
+        print('= Script repository for run requires secrets')
+        for t in token.split(':'):
+            secrets[t] = input('Enter secret for "%s": ' % t).strip()
+
+
+def _wizard_gitlab_mr(run, params, secrets):
+    for s in ('gitlabuser', 'gitlabtok'):
+        if s not in secrets:
+            secrets[s] = input('Enter secret for "%s": ' % s).strip()
+    params['GL_MR'] = input('Enter the URL to the gitlab mr": ').strip()
+
+
+def _wizard_github_pr(run, params, secrets):
+    for s in ('githubtok',):
+        if s not in secrets:
+            secrets[s] = input('Enter secret for "%s": ' % s).strip()
+
+    proj = input('Enter the GitHub project (eg docker/notary): ').strip()
+    owner, repo = proj.split('/')
+    params['GH_OWNER'] = owner
+    params['GH_REPO'] = repo
+    params['GH_PRNUM'] = input('Enter the pull request number: ').strip()
+
+
+def _wizard(args):
+    proj_def = _validate(args)
+    print('= Select the trigger')
+    trigger = _get_input(proj_def['triggers'], 'Name({name}) Type({type})')
+
+    print('= Select the run')
+    run = _get_input(trigger['runs'], '{name}')
+
+    secrets = {}
+    params = {}
+
+    if run.get('loop-on'):
+        _wizard_loop_params(run, params)
+
+    if run.get('script-repo'):
+        _wizard_registry_auth(proj_def, run, secrets)
+
+    if trigger['type'] == 'gitlab_mr':
+        _wizard_gitlab_mr(run, params, secrets)
+    elif trigger['type'] == 'github_pr':
+        _wizard_github_pr(run, params, secrets)
+
+    _fill_params(proj_def, trigger, run, params, secrets)
+
+    _create_workspace(args, proj_def, trigger, run, params, secrets)
+
+
 def _check_for_updates(args):
     with open(__file__, 'rb') as f:
         h = hashlib.md5()
@@ -287,6 +360,19 @@ def get_args(args=None):
     p.add_argument('--proj-def', '-d', required=True,
                    type=argparse.FileType('r'),
                    help='Project defintion .yml')
+
+    p = cmds.add_parser('wizard',
+                        help='A guided tour to help create a run.')
+    p.set_defaults(func=_wizard)
+    p.add_argument('--jobserv', '-j', default=api_url,
+                   help='The JobServ to query. Default=%(default)s')
+    p.add_argument('--proj-def', '-d', required=True,
+                   type=argparse.FileType('r'),
+                   help='Project defintion .yml')
+    p.add_argument('--workspace', '-w', required=True,
+                   help='''A directory to serve as the simulator workspace. It
+                        will hold the scripts needed to run the simulator and
+                        and also store its artifacts''')
 
     p = cmds.add_parser('create',
                         help='Create a workspace for executing simulated run.')
