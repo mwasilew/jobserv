@@ -9,6 +9,8 @@ import os
 import re
 import sys
 
+from urllib.parse import urlparse, quote_plus
+
 import requests
 import yaml
 
@@ -81,6 +83,33 @@ def _add_pr_params(params, secrets):
     params['GIT_SHA'] = data['head']['sha']
 
 
+def _add_mr_params(params, secrets):
+    headers = {
+        'Content-Type': 'application/json',
+        'PRIVATE-TOKEN': secrets['gitlabtok'],
+    }
+    p = urlparse(params['GL_MR'])
+    proj = quote_plus(p.path[1:p.path.find('/merge_requests/')])
+    url = (p.scheme + '://' + p.netloc + '/api/v4/projects/' +
+           proj + p.path[p.path.find('/merge_requests/'):])
+    r = requests.get(url, headers=headers)
+    if r.status_code != 200:
+        sys.exit('Unable to get MR info: %s: %d\n%s' % (
+            url, r.status_code, r.text))
+    data = r.json()
+    params['GIT_SHA'] = data['sha']
+    params['GIT_SHA_BASE'] = data['diff_refs']['start_sha']
+
+    url = (p.scheme + '://' + p.netloc + '/api/v4/projects/' +
+           str(data['source_project_id']))
+
+    r = requests.get(url, headers=headers)
+    if r.status_code != 200:
+        sys.exit('Unable to get MR info: %s: %d\n%s' % (
+            url, r.status_code, r.text))
+    params['GIT_URL'] = r.json()['http_url_to_repo']
+
+
 def _get_params(projdef, trigger, run, keyvals, secrets):
     params = {'H_RUN': 'simulator', 'H_BUILD': '42'}
     params.update(projdef.get('params', {}))
@@ -93,6 +122,8 @@ def _get_params(projdef, trigger, run, keyvals, secrets):
 
     if trigger['type'] == 'github_pr':
         _add_pr_params(params, secrets)
+    elif trigger['type'] == 'gitlab_mr':
+        _add_mr_params(params, secrets)
 
     return params
 
