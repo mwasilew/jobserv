@@ -142,17 +142,7 @@ def _get_secrets(keyvals):
     return secrets
 
 
-def _create(args):
-    if not os.path.exists(args.workspace):
-        sys.exit('Simulator workspace, %s, does not exist' % args.workspace)
-
-    proj_def = _validate(args)
-    trigger = _get_trigger(proj_def, args.trigger_name)
-    run = _get_run(trigger, args.run_name)
-    secrets = _get_secrets(args.secret)
-    params = _get_params(args.param)
-    _fill_params(proj_def, trigger, run, params, secrets)
-
+def _create_workspace(args, proj_def, trigger, run, params, secrets):
     rundef = {
         'simulator': True,
         'trigger_type': trigger['type'],
@@ -204,6 +194,20 @@ def _create(args):
 
     print('Simulator can now be run with %s run -w %s' % (
         sys.argv[0], args.workspace))
+
+
+def _create(args):
+    if not os.path.exists(args.workspace):
+        sys.exit('Simulator workspace, %s, does not exist' % args.workspace)
+
+    proj_def = _validate(args)
+    trigger = _get_trigger(proj_def, args.trigger_name)
+    run = _get_run(trigger, args.run_name)
+    secrets = _get_secrets(args.secret)
+    params = _get_params(args.param)
+    _fill_params(proj_def, trigger, run, params, secrets)
+
+    _create_workspace(args, proj_def, trigger, run, params, secrets)
 
 
 def _run(args):
