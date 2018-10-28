@@ -14,7 +14,7 @@ class NoStopApi(JobServApi):
        that the jobserv's lava logic will PASS/FAIL it when lava completes"""
 
     def update_status(self, status, msg, metadata=None):
-        if status == 'PASSED':
+        if status == 'PASSED' and os.path.exists('/tmp/lava-submitted'):
             # don't "complete" the run since we are waiting on lava
             status = 'RUNNING'
         super().update_status(status, msg, metadata)

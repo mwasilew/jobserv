@@ -70,3 +70,5 @@ with open(sys.argv[1]) as f:
     joburl = _getenv('LAVA_RPC').replace('RPC2', 'scheduler/job/%d' % jobid)
     print('Lava Job: %s' % joburl)
     _post(RUN_URL + 'tests/' + name + '/', data={'context': joburl})
+    with open('/tmp/lava-submitted', 'a') as f:
+        f.write(joburl + '\n')
