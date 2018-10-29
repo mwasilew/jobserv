@@ -9,12 +9,22 @@ from jobserv_runner.jobserv import JobServApi
 from jobserv_runner.handlers.simple import HandlerError, SimpleHandler
 
 
+def jobs_submitted():
+    # Find out if jobs were actually submitted from lava-submit. If they
+    # haven't been, then we should let the run complete
+    try:
+        with open('/tmp/lava-submitted') as f:
+            return f.read()
+    except FileNotFoundError:
+        pass
+
+
 class NoStopApi(JobServApi):
     """Extend the JobServApi to not PASS the job. It should stay running so
        that the jobserv's lava logic will PASS/FAIL it when lava completes"""
 
     def update_status(self, status, msg, metadata=None):
-        if status == 'PASSED' and os.path.exists('/tmp/lava-submitted'):
+        if status == 'PASSED' and jobs_submitted():
             # don't "complete" the run since we are waiting on lava
             status = 'RUNNING'
         super().update_status(status, msg, metadata)
