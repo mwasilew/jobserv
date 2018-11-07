@@ -4,20 +4,8 @@
 import json
 
 from jobserv_runner.handlers.github_pr import GHStatusApi
-from jobserv_runner.handlers.lava import (
-    HandlerError, LavaHandler, jobs_submitted)
+from jobserv_runner.handlers.lava import HandlerError, LavaHandler
 from jobserv_runner.handlers.simple import SimpleHandler
-
-
-class NoStopApi(GHStatusApi):
-    """Extend the JobServApi to not PASS the job. It should stay running so
-       that the jobserv's lava logic will PASS/FAIL it when lava completes"""
-
-    def update_status(self, status, msg, metadata=None):
-        if status == 'PASSED' and jobs_submitted():
-            # don't "complete" the run since we are waiting on lava
-            status = 'RUNNING'
-        super().update_status(status, msg, metadata)
 
 
 class LavaPRHandler(LavaHandler):
@@ -30,7 +18,7 @@ class LavaPRHandler(LavaHandler):
         token = rundef.get('secrets', {}).get('githubtok')
         if not token:
             raise HandlerError('"githubtok" not set in rundef secrets')
-        jobserv = NoStopApi(rundef)
+        jobserv = GHStatusApi(rundef)
 
         user = rundef.get('secrets', {}).get('LAVA_USER')
         token = rundef.get('secrets', {}).get('LAVA_TOKEN')
