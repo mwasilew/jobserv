@@ -389,6 +389,42 @@ class RunAPITest(JobServTest):
         self.assertEqual(expected, results)
 
     @patch('jobserv.api.run.Storage')
+    def test_build_complete_lava_tests(self, storage):
+        m = Mock()
+        m.get_project_definition.return_value = json.dumps({
+            'timeout': 5,
+            'triggers': [
+                {
+                    'name': 'github',
+                    'type': 'github_pr',
+                    'runs': [{
+                        'name': 'run0',
+                    }],
+                },
+            ],
+        })
+        m.console_logfd.return_value = open('/dev/null', 'w')
+        m.get_run_definition.return_value = json.dumps({})
+        storage.return_value = m
+        r = Run(self.build, 'run0')
+        r.trigger = 'github'
+        r.status = BuildStatus.RUNNING
+        db.session.add(r)
+        db.session.commit()
+
+        db.session.add(Test(r, 'test-1', 'ctx', BuildStatus.QUEUED))
+        db.session.commit()
+
+        headers = [
+            ('Authorization', 'Token %s' % r.api_key),
+            ('X-RUN-STATUS', 'PASSED'),
+        ]
+        self._post(self.urlbase + 'run0/', None, headers, 200)
+
+        db.session.refresh(r)
+        self.assertEqual(BuildStatus.RUNNING, r.status)
+
+    @patch('jobserv.api.run.Storage')
     @patch('jobserv.api.run.notify_build_complete')
     def test_build_complete_email(self, build_complete, storage):
         m = Mock()

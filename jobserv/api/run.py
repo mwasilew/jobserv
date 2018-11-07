@@ -157,6 +157,13 @@ def _failed_tests(storage, run):
     return failures
 
 
+def _running_tests(run):
+    for t in run.tests:
+        if t.status not in (BuildStatus.PASSED, BuildStatus.FAILED):
+            return True
+    return False
+
+
 def _authenticate_runner(run):
     key = request.args.get('apikey')
     if key and key == run.api_key:
@@ -193,6 +200,8 @@ def run_update(proj, build_id, run):
         status = BuildStatus[status]
         if r.status != status:
             if status in (BuildStatus.PASSED, BuildStatus.FAILED):
+                if _running_tests(r):
+                    status = BuildStatus.RUNNING
                 if _failed_tests(storage, r):
                     status = BuildStatus.FAILED
                 storage.copy_log(r)
