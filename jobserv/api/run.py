@@ -224,8 +224,7 @@ def run_rerun(proj, build_id, run):
     return jsendify({})
 
 
-@blueprint.route('/<run>/.rundef.json', methods=('GET',))
-def run_get_definition(proj, build_id, run):
+def _get_run_def(proj, build_id, run):
     r = _get_run(proj, build_id, run)
     rundef = Storage().get_run_definition(r)
     try:
@@ -238,9 +237,34 @@ def run_get_definition(proj, build_id, run):
             if secrets:
                 rundef['secrets'] = {k: 'TODO' for k, v in secrets.items()}
         del rundef['api_key']
-        rundef = json.dumps(rundef, indent=2)
+    return rundef
 
+
+@blueprint.route('/<run>/.rundef.json', methods=('GET',))
+def run_get_definition(proj, build_id, run):
+    rundef = json.dumps(_get_run_def(proj, build_id, run), indent=2)
     return rundef, 200, {'Content-Type': 'application/json'}
+
+
+@blueprint.route('/<run>/.simulate.sh', methods=('GET',))
+def run_get_simulate_sh(proj, build_id, run):
+    rundef = _get_run_def(proj, build_id, run)
+    runner = rundef['runner_url']
+    script = '''#!/bin/sh -e
+
+SIMDIR="${{SIMDIR-/tmp/sim-run}}
+echo "Creating JobServ simulation under $SIMDIR
+mkdir $SIMDIR
+cd $SIMDIR
+
+cat >rundef.json <<EIEIO
+{rundef}
+EIEIO
+
+wget -O runner {runner}
+PYTHONPATH=./runner python3 -m jobserv_runner.simulator -w `pwd` rundef.json
+    '''.format(rundef=json.dumps(rundef, indent=2), runner=runner)
+    return script, 200, {'Content-Type': 'text/plain'}
 
 
 @blueprint.route('/<run>/<path:path>', methods=('GET',))

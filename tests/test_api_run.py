@@ -78,6 +78,7 @@ class RunAPITest(JobServTest):
             'api_key': 'secret',
             'secrets': {'key': 'val'},
             'script-repo': {'token': 'secret'},
+            'runner_url': 'foo',
         }
         storage().get_run_definition.return_value = json.dumps(rundef)
         db.session.add(Run(self.build, 'run0'))
@@ -88,6 +89,9 @@ class RunAPITest(JobServTest):
         self.assertEqual('TODO', data['secrets']['key'])
         self.assertEqual('secret', data['script-repo']['token'])
         self.assertIsNone(data.get('api_key'))
+
+        r = self.client.get(self.urlbase + 'run0/.simulate.sh')
+        self.assertEqual(200, r.status_code, r.data)
 
     def _post(self, url, data, headers, status=200):
         resp = self.client.post(url, data=data, headers=headers)

@@ -329,17 +329,11 @@ class SimpleHandler(object):
     def log_simulator_instructions(self):
         with self.log_context('Steps to recreate inside simulator') as log:
             msg = '''
-    mkdir /tmp/sim-run
-    cd /tmp/sim-run
-    wget -O runner {runner}
-    # wget'ing the .rundef.json file may required the --header flag if the
+    wget -O simulate.sh {run}/.simulate.sh
+    # wget'ing the file may require the --header flag if the
     # jobserv API requires authentication.
-    wget -O rundef.json {run}.rundef.json
-    # open rundef.json and update values for secrets
-    PYTHONPATH=./runner \
-        python3 -m jobserv_runner.simulator -w `pwd` rundef.json
-
-'''.format(run=self.rundef['run_url'], runner=self.rundef['runner_url'])
+    sh ./simulate.sh
+'''.format(run=self.rundef['run_url'])
             log._write(msg)
 
     def prepare_mounts(self):
