@@ -252,8 +252,8 @@ def run_get_simulate_sh(proj, build_id, run):
     runner = rundef['runner_url']
     script = '''#!/bin/sh -e
 
-SIMDIR="${{SIMDIR-/tmp/sim-run}}
-echo "Creating JobServ simulation under $SIMDIR
+SIMDIR="${{SIMDIR-/tmp/sim-run}}"
+echo "Creating JobServ simulation under $SIMDIR"
 mkdir $SIMDIR
 cd $SIMDIR
 
