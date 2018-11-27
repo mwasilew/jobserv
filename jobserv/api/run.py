@@ -248,8 +248,9 @@ def run_get_definition(proj, build_id, run):
 
 @blueprint.route('/<run>/.simulate.sh', methods=('GET',))
 def run_get_simulate_sh(proj, build_id, run):
+    runner = url_for('api_worker.runner_download', _external=True)
     rundef = _get_run_def(proj, build_id, run)
-    runner = rundef['runner_url']
+    rundef['runner_url'] = runner
     script = '''#!/bin/sh -e
 
 SIMDIR="${{SIMDIR-/tmp/sim-run}}"
