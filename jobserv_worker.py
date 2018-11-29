@@ -1,5 +1,6 @@
 #!/usr/bin/python3
 # Copyright (C) 2017 Linaro Limited
+# Copyright (C) 2018 Foundries.io
 # Author: Andy Doan <andy.doan@linaro.org>
 
 import argparse
@@ -36,6 +37,9 @@ logging.basicConfig(
                   config.get('jobserv', 'log_level', fallback='INFO')))
 log = logging.getLogger('jobserv-worker')
 logging.getLogger('requests').setLevel(logging.WARNING)
+
+FEATURE_NEW_LOOPER = config.getboolean(
+    'jobserv', 'feature_new_looper', fallback=False)
 
 
 def _create_conf(server_url, hostname, concurrent_runs, host_tags, surges):
@@ -357,16 +361,20 @@ def _handle_run(jobserv, rundef, rundir=None):
             os.mkdir(runsdir)
         if not rundir:
             rundir = tempfile.mkdtemp(dir=runsdir)
-        sys.path.insert(0, _download_runner(rundef['runner_url'], rundir))
-        m = importlib.import_module(
-            'jobserv_runner.handlers.' + rundef['trigger_type'])
         try:
             if os.fork() == 0:
+                sys.path.insert(
+                    0, _download_runner(rundef['runner_url'], rundir))
+                m = importlib.import_module(
+                    'jobserv_runner.handlers.' + rundef['trigger_type'])
                 try:
                     m.handler.execute(os.path.dirname(script), rundir, rundef)
                 except m.handler.RebootAndContinue as e:
                     _handle_reboot(rundir, rundef, e.cold)
                 _delete_rundir(rundir)
+                if FEATURE_NEW_LOOPER:
+                    log.info('Exiting new looper after run')
+                    sys.exit(0)
         except SystemExit:
             raise
     except Exception:
@@ -417,6 +425,9 @@ def cmd_check(args):
     if ver != config['jobserv']['version']:
         log.warning('Upgrading client to: %s', ver)
         _upgrade_worker(args, ver)
+        if FEATURE_NEW_LOOPER:
+            log.info('Exiting script so changes can apply')
+            sys.exit(0)
 
 
 def _docker_clean():
@@ -463,9 +474,13 @@ def cmd_loop(args):
             next_clean = time.time() + (args.docker_rm * 3600)
             while True:
                 log.debug('Calling check')
-                rc = subprocess.call(cmd_args)
-                if rc:
-                    log.error('Last call exited with rc: %d', rc)
+                if FEATURE_NEW_LOOPER:
+                    log.debug('Running with new non-forking looper')
+                    cmd_check(args)
+                else:
+                    rc = subprocess.call(cmd_args)
+                    if rc:
+                        log.error('Last call exited with rc: %d', rc)
                 if time.time() > next_clean:
                     log.info('Running docker container cleanup')
                     _docker_clean()
