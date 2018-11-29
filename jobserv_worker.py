@@ -360,14 +360,15 @@ def _handle_run(jobserv, rundef, rundir=None):
         sys.path.insert(0, _download_runner(rundef['runner_url'], rundir))
         m = importlib.import_module(
             'jobserv_runner.handlers.' + rundef['trigger_type'])
-        if os.fork() == 0:
-            try:
-                m.handler.execute(os.path.dirname(script), rundir, rundef)
-            except m.handler.RebootAndContinue as e:
-                _handle_reboot(rundir, rundef, e.cold)
-            _delete_rundir(rundir)
-    except SystemExit:
-        raise
+        try:
+            if os.fork() == 0:
+                try:
+                    m.handler.execute(os.path.dirname(script), rundir, rundef)
+                except m.handler.RebootAndContinue as e:
+                    _handle_reboot(rundir, rundef, e.cold)
+                _delete_rundir(rundir)
+        except SystemExit:
+            raise
     except Exception:
         stack = traceback.format_exc().strip().replace('\n', '\n | ')
         msg = 'Unexpected runner error:\n | ' + stack
