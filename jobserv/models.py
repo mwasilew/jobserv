@@ -602,7 +602,9 @@ class Worker(db.Model):
         self.enlisted = False
 
     def validate_api_key(self, key):
-        return bcrypt.checkpw(key.encode(), self.api_key)
+        if type(self.api_key) == bytes:
+            return bcrypt.checkpw(key.encode(), self.api_key)
+        return bcrypt.checkpw(key.encode(), self.api_key.encode())
 
     def __repr__(self):
         return '<Worker %s - %s/%s>' % (self.name, self.online, self.enlisted)
