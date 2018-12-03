@@ -58,7 +58,8 @@ class LavaPRHandlerTest(TestCase):
         for x, val in {'H_RUN_URL': 'runurl', 'H_RUN_TOKEN': 'token'}.items():
             p = os.path.join(secrets, x)
             self.assertTrue(os.path.exists(p), 'path: ' + p)
-            self.assertEqual(val, open(p).read())
+            with open(p) as f:
+                self.assertEqual(val, f.read())
 
         scripts = os.path.join(self.handler.run_dir, 'lava-bin')
         p = os.path.join(scripts, 'lava-submit')
