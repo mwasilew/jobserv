@@ -25,7 +25,8 @@ def _getenv(key):
     val = None
     secret = os.path.join('/secrets', key)
     if os.path.exists(secret):
-        val = open(secret).read()
+        with open(secret) as f:
+            val = f.read()
     val = os.getenv(key, val)
     if not val:
         sys.exit('Missing required env variable or secret: ' + key)

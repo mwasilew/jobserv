@@ -150,7 +150,8 @@ class SimpleHandlerTest(TestCase):
         self.handler.prepare_mounts()
 
         secret_file = os.path.join(self.handler.run_dir, 'secrets', 'foo')
-        self.assertEqual('foo-secret-value', open(secret_file).read())
+        with open(secret_file) as f:
+            self.assertEqual('foo-secret-value', f.read())
 
         vol = os.path.join(self.handler.worker_dir, 'volumes', 'p/blah')
         self.assertTrue(os.path.isdir(vol))
