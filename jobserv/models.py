@@ -660,7 +660,6 @@ class Worker(db.Model):
         vals = ','.join(['%s=%s' % (k, v[0]) for k, v in kwargs.items()])
         with open(path, 'a') as f:
             f.write('%d: %s\n' % (now, vals))
-
         try:
             # this is a no-op if unconfigured
             with StatsClient() as c:
