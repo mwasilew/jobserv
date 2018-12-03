@@ -28,7 +28,7 @@ def _is_worker_authenticated(host):
     if key:
         parts = key.split(' ')
         if len(parts) == 2 and parts[0] == 'Token':
-            return parts[1] == host.api_key
+            return host.validate_api_key(parts[1])
     return False
 
 
@@ -42,7 +42,7 @@ def worker_authenticated(f):
         if len(parts) != 2 or parts[0] != 'Token':
             return jsendify('Invalid Authorization header', 401)
         worker = get_or_404(Worker.query.filter_by(name=kwargs['name']))
-        if parts[1] != worker.api_key:
+        if not worker.validate_api_key(parts[1]):
             return jsendify('Incorrect API key for host', 401)
         return f(*args, **kwargs)
     return wrapper

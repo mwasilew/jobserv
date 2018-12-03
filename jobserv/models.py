@@ -600,6 +600,9 @@ class Worker(db.Model):
         self.online = True
         self.enlisted = False
 
+    def validate_api_key(self, key):
+        return key == self.api_key
+
     def __repr__(self):
         return '<Worker %s - %s/%s>' % (self.name, self.online, self.enlisted)
 
