@@ -12,6 +12,7 @@ import random
 import string
 import time
 
+import bcrypt
 import sqlalchemy.dialects.mysql.mysqldb as mysqldb
 
 from cryptography.fernet import Fernet
@@ -591,7 +592,7 @@ class Worker(db.Model):
         self.mem_total = mem_total
         self.cpu_total = cpu_total
         self.cpu_type = cpu_type
-        self.api_key = api_key
+        self.api_key = bcrypt.hashpw(api_key.encode(), bcrypt.gensalt())
         self.concurrent_runs = concurrent_runs
         if isinstance(host_tags, list):
             self.host_tags = ','.join(host_tags)
@@ -601,7 +602,7 @@ class Worker(db.Model):
         self.enlisted = False
 
     def validate_api_key(self, key):
-        return key == self.api_key
+        return bcrypt.checkpw(key.encode(), self.api_key)
 
     def __repr__(self):
         return '<Worker %s - %s/%s>' % (self.name, self.online, self.enlisted)
