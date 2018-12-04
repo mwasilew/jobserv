@@ -133,7 +133,8 @@ def notify_build_complete(build, to_list):
 
 
 def notify_run_terminated(run, cutoff):
-    msg = 'The run has been terminated after: %s' % cutoff
+    url = run_url(run)
+    msg = 'The run has been terminated after: %s\n  %s' % (cutoff, url)
     msg = MIMEText(msg)
     msg['Message-ID'] = make_msgid('jobserv-%s' % run.id)
     msg['From'] = SMTP_USER
