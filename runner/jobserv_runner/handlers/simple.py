@@ -148,7 +148,7 @@ class SimpleHandler(object):
             f.seek(0)
             try:
                 data = json.load(f)
-            except:
+            except Exception:
                 data = {'auths': {}}
             data['auths'][server] = {'auth': auth}
             f.seek(0)
@@ -461,7 +461,7 @@ class SimpleHandler(object):
                 try:
                     jobserv.update_status(
                         'FAILED', 'Unexpected error: ' + stack)
-                except:
+                except Exception:
                     stack = traceback.format_exc()
                     print('Unable to fail job:\n' + stack)
         return False
