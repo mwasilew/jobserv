@@ -181,7 +181,8 @@ def _check_stuck():
             log.error('Found stuck run %s/%s/%s on worker %s',
                       r.build.project.name, r.build.build_id, r.name, r.worker)
             m = '\n' + '=' * 72 + '\n'
-            m += 'ERROR: Run appears to be stuck after %s\n' % period
+            m += '%s ERROR: Run appears to be stuck after %s\n' % (
+                datetime.datetime.utcnow(), period)
             m += '=' * 72 + '\n'
             _update_run(r, status=BuildStatus.FAILED.name, message=m)
             notify_run_terminated(r, period)
