@@ -670,5 +670,5 @@ class Worker(db.Model):
             # this is a no-op if unconfigured
             with StatsClient() as c:
                 c.worker_ping(self, now, kwargs)
-        except:
+        except Exception:
             logging.exception('Unable to update metrics for ' + self.name)
