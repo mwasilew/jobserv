@@ -5,6 +5,7 @@ import contextlib
 import fcntl
 import json
 import io
+import xml.etree.ElementTree as ET
 import os
 import shutil
 import signal
@@ -148,7 +149,7 @@ class SimpleHandler(object):
             f.seek(0)
             try:
                 data = json.load(f)
-            except:
+            except Exception:
                 data = {'auths': {}}
             data['auths'][server] = {'auth': auth}
             f.seek(0)
@@ -362,6 +363,57 @@ class SimpleHandler(object):
         signal.signal(signal.SIGALRM, self._on_alarm)
         signal.alarm(self.rundef['timeout'] * 60)
 
+    def _junit_errors(self, log, junit_xml):
+        try:
+            root = ET.fromstring(junit_xml)
+        except ET.ParseError as pe:
+            log.warn('Unable to parse junit.xml: %s\n' % pe)
+            return True
+
+        failed = False
+        skipped = 0
+        for ts in root.iter('testsuite'):
+            results = []
+            result = 'PASSED'
+
+            for tc in ts:
+                status = 'PASSED'
+                child = list(tc)
+                if len(child):
+                    if child[0].tag in ('error', 'failure'):
+                        status = 'FAILED'
+                        result = status
+                        failed = True
+                    elif child[0].tag == 'skipped':
+                        skipped += 1
+                        continue
+                results.append({
+                    'name': tc.attrib['name'],
+                    'context': tc.attrib.get('classname'),
+                    'status': status,
+                })
+
+            # some runners like junit don't set the "skipped" attribute,
+            # so look at both values we've found and pick the biggest one
+            attr_skipped = int(ts.attrib.get('skipped', '0'))
+            context = 'junit.xml skipped=%d' % max(attr_skipped, skipped)
+            name = ts.attrib.get('name')
+            if not name:
+                name = 'junit'
+            self.jobserv.add_test(name, context, result, results)
+        return failed
+
+    def test_suite_errors(self):
+        """Look for artifacts like junit.xml and automatically create Test
+           and TestResult objects for the Run."""
+        junit = os.path.join(self.run_dir, 'archive/junit.xml')
+        try:
+            with open(junit) as f:
+                with self.log_context('Analyzing junit results') as log:
+                    return self._junit_errors(log, f.read())
+        except FileNotFoundError:
+            pass
+
     def upload_artifacts(self):
         self.jobserv.update_status('UPLOADING', 'Finding artifacts to upload')
         archive = os.path.join(self.run_dir, 'archive')
@@ -442,6 +494,10 @@ class SimpleHandler(object):
 
             if not h.upload_artifacts():
                 last_status = 'FAILED'
+
+            if h.test_suite_errors():
+                last_status = 'FAILED'
+
             if last_status == 'PASSED':
                 jobserv.update_status(last_status, passed_msg)
             else:
@@ -461,7 +517,7 @@ class SimpleHandler(object):
                 try:
                     jobserv.update_status(
                         'FAILED', 'Unexpected error: ' + stack)
-                except:
+                except Exception:
                     stack = traceback.format_exc()
                     print('Unable to fail job:\n' + stack)
         return False

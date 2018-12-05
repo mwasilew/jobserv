@@ -93,6 +93,25 @@ class JobServApi(object):
         if not self.update_run(msg.encode(), status, 8, metadata):
             logging.error('TODO HOW TO HANDLE?')
 
+    def add_test(self, test_name, context, status, results=[]):
+        headers = {'Authorization': 'Token ' + self._api_key}
+        test = {
+            'context': context,
+            'status': status,
+            'results': results,
+        }
+        if self.SIMULATED:
+            print('== %s: Test(%s)=%r\n' % (
+                datetime.datetime.utcnow(), test_name, test))
+            return
+        url = self._run_url + 'tests/%s/' % test_name
+        for x in range(3):
+            r = requests.post(url, json=test, headers=headers)
+            if r.status_code == 200:
+                return
+            time.sleep(2 * x + 1)  # try and give the server a moment
+        return r
+
     def _get_urls(self, uploads):
         headers = {
             'content-type': 'application/json',

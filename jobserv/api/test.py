@@ -30,10 +30,25 @@ def test_create(proj, build_id, run, test):
     r = _get_run(proj, build_id, run)
     _authenticate_runner(r)
     context = ''
+    status = results = None
     json = request.get_json()
     if json:
         context = json.get('context')
-    db.session.add(Test(r, test, context))
+        status = json.get('status')
+        results = json.get('results')
+
+    t = Test(r, test, context)
+    db.session.add(t)
+
+    if status:
+        t.status = status
+
+    if results:
+        db.session.flush()
+        for tr in results:
+            s = BuildStatus[tr['status']]
+            db.session.add(TestResult(t, tr['name'], tr.get('context'), s))
+
     db.session.commit()
     return jsendify({})
 
