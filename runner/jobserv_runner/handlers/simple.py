@@ -371,6 +371,7 @@ class SimpleHandler(object):
             return True
 
         failed = False
+        skipped = 0
         for ts in root.iter('testsuite'):
             results = []
             result = 'PASSED'
@@ -384,6 +385,7 @@ class SimpleHandler(object):
                         result = status
                         failed = True
                     elif child[0].tag == 'skipped':
+                        skipped += 1
                         continue
                 results.append({
                     'name': tc.attrib['name'],
@@ -391,8 +393,14 @@ class SimpleHandler(object):
                     'status': status,
                 })
 
-            context = 'junit.xml skipped=' + ts.attrib.get('skipped', '0')
-            self.jobserv.add_test(ts.attrib['name'], context, result, results)
+            # some runners like junit don't set the "skipped" attribute,
+            # so look at both values we've found and pick the biggest one
+            attr_skipped = int(ts.attrib.get('skipped', '0'))
+            context = 'junit.xml skipped=%d' % max(attr_skipped, skipped)
+            name = ts.attrib.get('name')
+            if not name:
+                name = 'junit'
+            self.jobserv.add_test(name, context, result, results)
         return failed
 
     def test_suite_errors(self):
