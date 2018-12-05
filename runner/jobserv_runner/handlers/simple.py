@@ -386,7 +386,7 @@ class SimpleHandler(object):
                         failed = True
                     elif child[0].tag == 'skipped':
                         skipped += 1
-                        continue
+                        status = 'SKIPPED'
                 results.append({
                     'name': tc.attrib['name'],
                     'context': tc.attrib.get('classname'),

@@ -177,6 +177,8 @@ class BuildStatus(enum.Enum):
     UPLOADING = 6
     PROMOTED = 7  # ie - the build got "released"
 
+    SKIPPED = 8  # only valid for Test and TestResult
+
 
 class StatusComparator(Comparator):
     def __eq__(self, other):
@@ -210,7 +212,7 @@ class StatusMixin(object):
     def complete(self):
         return self._status in (
             BuildStatus.PASSED.value, BuildStatus.FAILED.value,
-            BuildStatus.PROMOTED.value)
+            BuildStatus.PROMOTED.value, BuildStatus.SKIPPED)
 
     @contextlib.contextmanager
     def locked(self):
@@ -539,7 +541,7 @@ class Test(db.Model, StatusMixin):
         for result in self.results:
             if not result.complete:
                 return False
-        return True
+        return super().complete
 
     def __repr__(self):
         return '<Test %s: %s>' % (
@@ -670,5 +672,5 @@ class Worker(db.Model):
             # this is a no-op if unconfigured
             with StatsClient() as c:
                 c.worker_ping(self, now, kwargs)
-        except:
+        except Exception:
             logging.exception('Unable to update metrics for ' + self.name)
