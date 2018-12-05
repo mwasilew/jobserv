@@ -196,13 +196,18 @@ class TestsTest(JobServTest):
 
     def test_complete(self):
         t = Test(self.run, 'test-name', 'http://foo.com')
+        t.status = BuildStatus.PASSED
         db.session.add(t)
         db.session.commit()
         tr = TestResult(t, 'test-result-1', 'http://foo.com/tr')
         tr.status = 'PASSED'
         db.session.add(tr)
         db.session.refresh(t)
-        self.assertTrue(t.complete)
+        self.assertTrue(t.complete, 'status = %s' % t.status)
+
+        tr.status = BuildStatus.RUNNING
+        db.session.commit()
+        self.assertFalse(t.complete, 'status = %s' % t.status)
 
     def test_not_queued(self):
         """Tests should never set a Run to the QUEUED state"""

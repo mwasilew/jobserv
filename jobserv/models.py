@@ -539,7 +539,7 @@ class Test(db.Model, StatusMixin):
         for result in self.results:
             if not result.complete:
                 return False
-        return True
+        return super().complete
 
     def __repr__(self):
         return '<Test %s: %s>' % (
