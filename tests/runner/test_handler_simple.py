@@ -211,3 +211,26 @@ class SimpleHandlerTest(TestCase):
 
         with open(os.path.join(self.rdir, 'archive/f.txt')) as f:
             self.assertEqual('saved content\n', f.read())
+
+    def test_junit_tests(self):
+        archive = os.path.join(self.rdir, 'archive')
+        os.mkdir(archive)
+        shutil.copy(
+            os.path.join(os.path.dirname(__file__), 'junit.xml'), archive)
+        self.assertTrue(self.handler.test_suite_errors())
+        self.assertEqual('Sanitycheck',
+                         self.handler.jobserv.add_test.call_args_list[0][0][0])
+        self.assertEqual('junit.xml skipped=7',
+                         self.handler.jobserv.add_test.call_args_list[0][0][1])
+        self.assertEqual('FAILED',
+                         self.handler.jobserv.add_test.call_args_list[0][0][2])
+        results = self.handler.jobserv.add_test.call_args_list[0][0][3]
+        self.assertEqual(390, len(results), results)
+        fails = passes = 0
+        for x in results:
+            if x['status'] == 'PASSED':
+                passes += 1
+            else:
+                fails += 1
+        self.assertEqual(1, fails)
+        self.assertEqual(389, passes)
