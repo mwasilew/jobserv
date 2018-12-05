@@ -7,11 +7,6 @@ triggers:
         container: python:3.5-alpine
         host-tag: amd64
         script: unit-test
-        test-grepping:
-          result-pattern: "^(?P<name>test_.*) \\.\\.\\. (?P<result>(ok|ERROR))$"
-          fixupdict:
-            'ok': 'PASSED'
-            'ERROR': 'FAILED'
 
       - name: flake8
         container: python:3.5-alpine
@@ -34,8 +29,9 @@ triggers:
 scripts:
   flake8: |
     #!/bin/sh -ex
-    pip3 install flake8
-    flake8 --ignore=E722 --exclude=migrations/ ./
+    pip3 install flake8 flake8-junit-report==2.1.0
+    flake8 --ignore=E722 --exclude=migrations/ ./ | tee flake8.txt
+    flake8_junit flake8.txt /archive/junit.xml
 
   unit-test: |
     #!/bin/sh -ex
