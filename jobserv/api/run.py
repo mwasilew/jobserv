@@ -159,7 +159,7 @@ def _failed_tests(storage, run):
 
 def _running_tests(run):
     for t in run.tests:
-        if t.status not in (BuildStatus.PASSED, BuildStatus.FAILED):
+        if not t.complete:
             return True
     return False
 
