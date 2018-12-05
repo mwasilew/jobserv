@@ -84,6 +84,11 @@ class TestAPITest(JobServTest):
                     'context': 'ctx1',
                     'status': 'FAILED',
                 },
+                {
+                    'name': 'tr3',
+                    'context': 'ctx1',
+                    'status': 'SKIPPED',
+                },
             ],
             'status': 'FAILED',
         }
@@ -94,9 +99,9 @@ class TestAPITest(JobServTest):
         self.assertEqual(
             ['test1', 'test2'], [x.name for x in self.test.run.tests])
         results = self.test.run.tests[-1].results
-        self.assertEqual(['tr1', 'tr2'], [x.name for x in results])
-        self.assertEqual([BuildStatus.PASSED, BuildStatus.FAILED],
-                         [x.status for x in results])
+        self.assertEqual(['tr1', 'tr2', 'tr3'], [x.name for x in results])
+        exp = [BuildStatus.PASSED, BuildStatus.FAILED, BuildStatus.SKIPPED]
+        self.assertEqual(exp, [x.status for x in results])
         self.assertEqual(BuildStatus.FAILED, self.test.run.tests[-1].status)
 
     @patch('jobserv.api.test.Storage')

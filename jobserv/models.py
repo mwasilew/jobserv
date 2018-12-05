@@ -177,6 +177,8 @@ class BuildStatus(enum.Enum):
     UPLOADING = 6
     PROMOTED = 7  # ie - the build got "released"
 
+    SKIPPED = 8  # only valid for Test and TestResult
+
 
 class StatusComparator(Comparator):
     def __eq__(self, other):
@@ -210,7 +212,7 @@ class StatusMixin(object):
     def complete(self):
         return self._status in (
             BuildStatus.PASSED.value, BuildStatus.FAILED.value,
-            BuildStatus.PROMOTED.value)
+            BuildStatus.PROMOTED.value, BuildStatus.SKIPPED)
 
     @contextlib.contextmanager
     def locked(self):

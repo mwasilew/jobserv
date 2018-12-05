@@ -225,12 +225,15 @@ class SimpleHandlerTest(TestCase):
         self.assertEqual('FAILED',
                          self.handler.jobserv.add_test.call_args_list[0][0][2])
         results = self.handler.jobserv.add_test.call_args_list[0][0][3]
-        self.assertEqual(390, len(results), results)
-        fails = passes = 0
+        self.assertEqual(397, len(results), results)
+        fails = passes = skips = 0
         for x in results:
             if x['status'] == 'PASSED':
                 passes += 1
+            elif x['status'] == 'SKIPPED':
+                skips += 1
             else:
                 fails += 1
         self.assertEqual(1, fails)
+        self.assertEqual(7, skips)
         self.assertEqual(389, passes)
