@@ -55,7 +55,9 @@ def get_cumulative_status(obj, items):
         status = BuildStatus.RUNNING_WITH_FAILURES
     if BuildStatus.QUEUED in states and BuildStatus.PASSED in states:
         status = BuildStatus.RUNNING
-    if not states - set([BuildStatus.PASSED, BuildStatus.FAILED]):
+
+    complete = [BuildStatus.PASSED, BuildStatus.FAILED, BuildStatus.SKIPPED]
+    if not states - set(complete):
         # All runs have completed. Have we passed or failed
         if BuildStatus.FAILED in states:
             status = BuildStatus.FAILED
@@ -212,7 +214,7 @@ class StatusMixin(object):
     def complete(self):
         return self._status in (
             BuildStatus.PASSED.value, BuildStatus.FAILED.value,
-            BuildStatus.PROMOTED.value, BuildStatus.SKIPPED)
+            BuildStatus.PROMOTED.value, BuildStatus.SKIPPED.value)
 
     @contextlib.contextmanager
     def locked(self):

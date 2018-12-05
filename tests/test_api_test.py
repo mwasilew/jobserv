@@ -66,7 +66,8 @@ class TestAPITest(JobServTest):
         self.assertEqual(
             ['test1', 'test2'], [x.name for x in self.test.run.tests])
 
-    def test_test_create_results(self):
+    @patch('jobserv.api.run.Storage')
+    def test_test_create_results(self, storage):
         headers = [
             ('Authorization', 'Token %s' % self.test.run.api_key),
             ('Content-type', 'application/json'),
@@ -103,6 +104,15 @@ class TestAPITest(JobServTest):
         exp = [BuildStatus.PASSED, BuildStatus.FAILED, BuildStatus.SKIPPED]
         self.assertEqual(exp, [x.status for x in results])
         self.assertEqual(BuildStatus.FAILED, self.test.run.tests[-1].status)
+
+        self.test.run.tests[0].status = BuildStatus.PASSED
+        db.session.commit()
+        storage().get_run_definition.return_value = '{}'
+        headers.append(('X-RUN-STATUS', 'FAILED'))
+        self._post(
+            '/projects/proj-1/builds/1/runs/run0/', None, headers=headers)
+        db.session.refresh(self.test.run)
+        self.assertEqual(BuildStatus.FAILED, self.test.run.status)
 
     @patch('jobserv.api.test.Storage')
     def test_test_update(self, storage):
