@@ -385,7 +385,7 @@ class SimpleHandler(object):
                         status = 'FAILED'
                         result = status
                         failed = True
-                        output = ET.tostring(child[0], encoding='unicode')
+                        output = ET.tostring(tc, encoding='unicode')
                     elif child[0].tag == 'skipped':
                         skipped += 1
                         status = 'SKIPPED'
