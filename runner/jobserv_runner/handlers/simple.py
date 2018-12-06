@@ -378,12 +378,14 @@ class SimpleHandler(object):
 
             for tc in ts:
                 status = 'PASSED'
+                output = None
                 child = list(tc)
                 if len(child):
                     if child[0].tag in ('error', 'failure'):
                         status = 'FAILED'
                         result = status
                         failed = True
+                        output = ET.tostring(child[0], encoding='unicode')
                     elif child[0].tag == 'skipped':
                         skipped += 1
                         status = 'SKIPPED'
@@ -391,6 +393,7 @@ class SimpleHandler(object):
                     'name': tc.attrib['name'],
                     'context': tc.attrib.get('classname'),
                     'status': status,
+                    'output': output,
                 })
 
             # some runners like junit don't set the "skipped" attribute,

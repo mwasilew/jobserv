@@ -25,6 +25,14 @@ def test_get(proj, build_id, run, test):
     return jsendify({'test': t.as_json(detailed=True)})
 
 
+def create_test_result(test, test_result_dict):
+    name = test_result_dict['name']
+    status = BuildStatus[test_result_dict['status']]
+    context = test_result_dict.get('context')
+    output = test_result_dict.get('output')
+    db.session.add(TestResult(test, name, context, status, output))
+
+
 @blueprint.route('/<test>/', methods=('POST',))
 def test_create(proj, build_id, run, test):
     r = _get_run(proj, build_id, run)
@@ -46,8 +54,7 @@ def test_create(proj, build_id, run, test):
     if results:
         db.session.flush()
         for tr in results:
-            s = BuildStatus[tr['status']]
-            db.session.add(TestResult(t, tr['name'], tr.get('context'), s))
+            create_test_result(t, tr)
 
     db.session.commit()
     return jsendify({})
@@ -79,8 +86,7 @@ def test_update(proj, build_id, run, test):
                 f.write(msg)
         if results:
             for tr in results:
-                s = BuildStatus[tr['status']]
-                db.session.add(TestResult(t, tr['name'], tr.get('context'), s))
+                create_test_result(t, tr)
             db.session.commit()
         if status:
             run_status = t.set_status(status)
