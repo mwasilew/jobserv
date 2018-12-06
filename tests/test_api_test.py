@@ -114,6 +114,31 @@ class TestAPITest(JobServTest):
         db.session.refresh(self.test.run)
         self.assertEqual(BuildStatus.FAILED, self.test.run.status)
 
+    def test_test_create_results_stdout(self):
+        headers = [
+            ('Authorization', 'Token %s' % self.test.run.api_key),
+            ('Content-type', 'application/json'),
+        ]
+        test = {
+            'context': 'junit',
+            'results': [
+                {
+                    'name': 'tr1',
+                    'context': 'ctx1',
+                    'status': 'PASSED',
+                    'output': 'This is the test output',
+                },
+            ],
+            'status': 'FAILED',
+        }
+
+        url = self.urlbase + 'test2/'
+        self._post(url, json.dumps(test), headers)
+        db.session.refresh(self.test.run)
+        self.assertEqual(
+            'This is the test output',
+            self.test.run.tests[-1].results[0].output)
+
     @patch('jobserv.api.test.Storage')
     def test_test_update(self, storage):
         headers = [

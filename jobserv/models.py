@@ -528,6 +528,7 @@ class Test(db.Model, StatusMixin):
                     'name': x.name,
                     'context': x.context,
                     'status': x.status.name,
+                    'output': x.output,
                 })
         return data
 
@@ -558,12 +559,15 @@ class TestResult(db.Model, StatusMixin):
     name = db.Column(db.String(1024), nullable=False)
     context = db.Column(db.String(1024))
     _status = db.Column(db.Integer)
+    output = db.Column(db.Text())
 
-    def __init__(self, test, name, context, status=BuildStatus.QUEUED):
+    def __init__(self, test, name, context,
+                 status=BuildStatus.QUEUED, output=None):
         self.test_id = test.id
         self.name = name
         self.context = context
         self.status = status
+        self.output = output
 
     def __repr__(self):
         return '<TestResult %s: %s>' % (

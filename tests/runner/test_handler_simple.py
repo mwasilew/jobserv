@@ -237,3 +237,4 @@ class SimpleHandlerTest(TestCase):
         self.assertEqual(1, fails)
         self.assertEqual(7, skips)
         self.assertEqual(389, passes)
+        self.assertIn('Booting Zephyr', results[87]['output'])
