@@ -462,7 +462,8 @@ def cmd_loop(args):
         cmd_args = [config['tools']['worker-wrapper'], 'check']
     except KeyError:
         cmd_args = [sys.argv[0], 'check']
-    with open('/tmp/jobserv_worker.lock', 'w+') as f:
+    lockfile = os.path.join(os.path.dirname(script), '.worker-lock')
+    with open(lockfile, 'w+') as f:
         try:
             fcntl.flock(f, fcntl.LOCK_EX | fcntl.LOCK_NB)
         except IOError:
