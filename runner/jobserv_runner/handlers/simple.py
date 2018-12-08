@@ -198,6 +198,7 @@ class SimpleHandler(object):
             cmd.extend(['-w', self.container_cwd])
             cmd.extend(['--env-file', env_file])
             if self.rundef.get('privileged'):
+                log.info('Running with "--privileged"')
                 cmd.append('--privileged')
             cmd.extend(['-v%s:%s' % (host, cont) for host, cont in mounts])
             cmd.extend(
