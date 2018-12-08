@@ -4,6 +4,7 @@
 import fnmatch
 import json
 import logging
+import os
 import time
 
 import requests
@@ -25,12 +26,16 @@ logging.getLogger('pykwalify.core').setLevel(logging.WARNING)
 logging.getLogger('pykwalify.rule').setLevel(logging.WARNING)
 logging.getLogger('requests').setLevel(logging.WARNING)
 
+JOBSERV_URL = os.environ.get('JOBSERV_URL', 'http://lci-web')
+if JOBSERV_URL[-1] == '/':
+    JOBSERV_URL = JOBSERV_URL[:-1]
+
 _projects = {}
 
 
 def _get_projects():
     resp = permissions.internal_get(
-        'http://lci-web/project-triggers/', params={'type': 'git_poller'})
+        JOBSERV_URL + '/project-triggers/', params={'type': 'git_poller'})
     if resp.status_code != 200:
         log.error('Unable to get projects from front-end: %d %s',
                   resp.status_code, resp.text)
@@ -222,7 +227,7 @@ def _trigger(name, proj, projdef, trigger_name, change_params):
         data['reason'] += '\n' + _gitlab_log(proj, change_params)
 
     log.debug('Data for build is: %r', data)
-    url = 'http://lci-web/projects/%s/builds/' % name
+    url = '%s/projects/%s/builds/' % (JOBSERV_URL, name)
     resp = permissions.internal_post(url, json=data)
     if resp.status_code != 201:
         log.error('Error creating build(%s): %d - %s',
