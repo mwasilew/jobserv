@@ -231,7 +231,7 @@ def _trigger(name, proj, projdef, trigger_name, change_params):
     resp = permissions.internal_post(url, json=data)
     if resp.status_code != 201:
         log.error('Error creating build(%s): %d - %s',
-                  name, resp.status_code, resp.text)
+                  url, resp.status_code, resp.text)
     else:
         log.info('Build created: %s', resp.text)
 

@@ -404,12 +404,13 @@ class Run(db.Model, StatusMixin):
                 data['completed'] = self.status_events[-1].time
         if self.host_tag:
             data['host_tag'] = self.host_tag
-        if detailed:
-            data['status_events'] = [{'time': x.time, 'status': x.status.name}
-                                     for x in self.status_events]
+        if self.tests:
             data['tests'] = url_for(
                 'api_test.test_list', proj=p.name, build_id=b.build_id,
                 run=self.name, _external=True)
+        if detailed:
+            data['status_events'] = [{'time': x.time, 'status': x.status.name}
+                                     for x in self.status_events]
         return data
 
     def set_status(self, status):
