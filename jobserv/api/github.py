@@ -7,13 +7,15 @@ import time
 import traceback
 import yaml
 
+from urllib.parse import urlparse
+
 import requests
 
 from flask import Blueprint, request, url_for
 
 from jobserv.jsend import ApiError, get_or_404, jsendify
 from jobserv.models import Project, ProjectTrigger, TriggerTypes
-from jobserv.settings import RUN_URL_FMT
+from jobserv.settings import GITLAB_SERVERS, RUN_URL_FMT
 from jobserv.trigger import trigger_build
 
 blueprint = Blueprint('api_github', __name__, url_prefix='/github')
@@ -53,22 +55,34 @@ def _get_params(owner, repo, pr_num, token):
 
 
 def _get_proj_def(trigger, owner, repo, sha, token):
+    headers = {
+        'Content-Type': 'application/json',
+        'Authorization': 'token ' + token,
+    }
+
     if trigger.definition_repo:
         # look up defintion out-of-tree
         name = trigger.definition_file
         if not name:
             name = trigger.project.name + '.yml'
-        url = 'https://raw.githubusercontent.com/%s/master/%s' % (
-            trigger.definition_repo, name)
+
+        p = urlparse(trigger.definition_repo)
+        url = p.scheme + '://' + p.netloc
+        if url == 'https://github.com':
+            url = 'https://raw.githubusercontent.com/%s/master/%s' % (
+                trigger.definition_repo, name)
+        elif url in GITLAB_SERVERS:
+            headers['PRIVATE-TOKEN'] = trigger.secret_data['gitlabtok']
+            url = trigger.definition_repo.replace(
+                '.git', '') + '/raw/master/' + name
+        else:
+            raise ValueError('Unknown/unsupported definition repo: %s' % (
+                trigger.definition_repo))
     else:
         # look up defintion in tree
         url = 'https://raw.githubusercontent.com/%s/%s/%s/%s' % (
             owner, repo, sha, '.jobserv.yml')
 
-    headers = {
-        'Content-Type': 'application/json',
-        'Authorization': 'token ' + token,
-    }
     resp = requests.get(url, headers=headers)
     if resp.status_code == 200:
         data = yaml.load(resp.text)
