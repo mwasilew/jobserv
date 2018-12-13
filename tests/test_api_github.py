@@ -31,7 +31,7 @@ class ApiTest(JobServTest):
         rv.text = yaml.dump({})
         get.return_value = rv
         trigger = mock.Mock()
-        trigger.definition_repo = 'foo'
+        trigger.definition_repo = 'https://github.com/foo'
         with self.assertRaisesRegex(ValueError, 'No github_pr trigger types'):
             _get_proj_def(trigger, 'owner', 'repo', 'sha', 'token')
 
