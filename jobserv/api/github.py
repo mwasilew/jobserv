@@ -181,7 +181,8 @@ def on_webhook(proj):
         pr_num = data['pull_request']['number']
         repo = data['pull_request']['base']['repo']['full_name']
 
-    reason = 'GitHub PR(%s): %s' % (pr_num, event)
+    reason = 'GitHub PR(%s): %s, https://github.com/%s/pull/%d' % (
+        pr_num, event, repo, pr_num)
     secrets = trigger.secret_data
     token = secrets['githubtok']
     owner, repo = repo.split('/')
