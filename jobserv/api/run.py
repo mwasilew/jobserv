@@ -52,12 +52,14 @@ def run_get(proj, build_id, run):
     return jsendify({'run': data})
 
 
-def _create_triggers(projdef, storage, build, params, secrets, triggers):
+def _create_triggers(projdef, storage, build, params, secrets, triggers,
+                     parent_type):
     for trigger in triggers:
         run_names = trigger.get('run-names')
         trigger = projdef.get_trigger(trigger['name'])
         trigger['run-names'] = run_names
-        trigger_runs(storage, projdef, build, trigger, params, secrets)
+        trigger_runs(
+            storage, projdef, build, trigger, params, secrets, parent_type)
 
 
 def _handle_build_complete(projdef, storage, build, params, secrets, trigger):
@@ -77,7 +79,7 @@ def _handle_build_complete(projdef, storage, build, params, secrets, trigger):
         triggers = trigger.get('triggers', [])
         if triggers:
             _create_triggers(projdef, storage, build, params, secrets,
-                             trigger.get('triggers', []))
+                             trigger.get('triggers', []), trigger['type'])
             db.session.flush()
             build.refresh_status()
 
@@ -99,7 +101,8 @@ def _handle_triggers(storage, run):
             if rt['name'] == run.name:
                 if run.status == BuildStatus.PASSED:
                     _create_triggers(projdef, storage, run.build, params,
-                                     secrets, rt.get('triggers', []))
+                                     secrets, rt.get('triggers', []),
+                                     run_trigger['type'])
         if run.build.complete:
             _handle_build_complete(projdef, storage, run.build, params,
                                    secrets, run_trigger)

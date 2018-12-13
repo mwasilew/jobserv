@@ -188,6 +188,67 @@ class RunAPITest(JobServTest):
             'timeout': 5,
             'triggers': [
                 {
+                    'name': 'git',
+                    'type': 'git_poller',
+                    'runs': [{
+                        'name': 'run0',
+                        'host-tag': 'foo*',
+                        'triggers': [
+                            {'name': 'triggered', 'run-names': '{name}-run0'}
+                        ]
+                    }],
+                },
+                {
+                    'name': 'triggered',
+                    'type': 'simple',
+                    'runs': [{
+                        'name': 'test',
+                        'host-tag': 'bar',
+                        'container': 'container-foo',
+                        'script': 'test',
+                    }],
+                },
+            ],
+            'scripts': {
+                'test': '#test#',
+            }
+        })
+        m.console_logfd.return_value = open('/dev/null', 'w')
+        m.get_run_definition.return_value = json.dumps({})
+        storage.return_value = m
+        r = Run(self.build, 'run0')
+        r.trigger = 'git'
+        r.status = BuildStatus.RUNNING
+        db.session.add(r)
+        db.session.commit()
+
+        headers = [
+            ('Authorization', 'Token %s' % r.api_key),
+            ('X-RUN-STATUS', 'PASSED'),
+        ]
+        self._post(self.urlbase + 'run0/', None, headers, 200)
+        run = Run.query.all()[1]
+        self.assertEqual('test-run0', run.name)
+        self.assertEqual('QUEUED', run.status.name)
+
+        rundef = json.loads(m.set_run_definition.call_args_list[0][0][1])
+        self.assertEqual('simple', rundef['trigger_type'])
+
+    @patch('jobserv.api.run.Storage')
+    def test_run_complete_triggers_type_upgrade(self, storage):
+        """ We have a build that's triggered by either a github_pr or a
+            gitlab_mr. They might have runs that trigger something of type
+            "simple". This could be the case where a git_poller and github_mr
+            both trigger a similar set of tests *after* a build. In the
+            case of the github_pr, we should "upgrade" the type of each run
+            from simple to github_pr so that it can update the status of the
+            PR.
+        """
+        m = Mock()
+        m.get_project_definition.return_value = json.dumps({
+            'timeout': 5,
+            'triggers': [
+                {
                     'name': 'github',
                     'type': 'github_pr',
                     'runs': [{
@@ -229,7 +290,8 @@ class RunAPITest(JobServTest):
         self._post(self.urlbase + 'run0/', None, headers, 200)
         run = Run.query.all()[1]
         self.assertEqual('test-run0', run.name)
-        self.assertEqual('QUEUED', run.status.name)
+        rundef = json.loads(m.set_run_definition.call_args_list[0][0][1])
+        self.assertEqual('github_pr', rundef['trigger_type'])
 
     @patch('jobserv.api.run.Storage')
     def test_run_complete_triggers_name_error(self, storage):

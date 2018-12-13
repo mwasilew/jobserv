@@ -1,6 +1,7 @@
 # Copyright (C) 2017 Linaro Limited
 # Author: Andy Doan <andy.doan@linaro.org>
 
+import json
 import logging
 import traceback
 
@@ -15,7 +16,30 @@ from jobserv.settings import BUILD_URL_FMT
 from jobserv.storage import Storage
 
 
-def trigger_runs(storage, projdef, build, trigger, params, secrets):
+def _check_for_trigger_upgrade(rundef, trigger_type, parent_trigger_type):
+    """ We could have a build that's triggered by either a github_pr or a
+        gitlab_mr. They might have runs that trigger something of type
+        "simple". This could be the case where a git_poller and github_mr both
+        trigger a similar set of tests *after* a build. In the case of the
+        github_pr, we should "upgrade" the type of each run from simple to
+        github_pr so that it can update the status of the PR.
+    """
+    if parent_trigger_type == 'github_pr':
+        if trigger_type == 'simple':
+            rundef = json.loads(rundef)
+            rundef['trigger_type'] = 'github_pr'
+            logging.info('Updating the rundef from simple->github_pr')
+            rundef = json.dumps(rundef, indent=2)
+        elif trigger_type == 'lava':
+            rundef = json.loads(rundef)
+            rundef['trigger_type'] = 'lava_pr'
+            logging.info('Updating the rundef from lava->lava_pr')
+            rundef = json.dumps(rundef, indent=2)
+    return rundef
+
+
+def trigger_runs(storage, projdef, build, trigger, params, secrets,
+                 parent_type):
     name_fmt = trigger.get('run-names')
     try:
         for run in trigger['runs']:
@@ -33,6 +57,8 @@ def trigger_runs(storage, projdef, build, trigger, params, secrets):
             db.session.flush()
             rundef = projdef.get_run_definition(
                 r, run, trigger['type'], params, secrets)
+            rundef = _check_for_trigger_upgrade(
+                rundef, trigger['type'], parent_type)
             storage.set_run_definition(r, rundef)
     except ApiError:
         logging.exception('ApiError while triggering runs for: %r', trigger)
@@ -87,6 +113,6 @@ def trigger_build(project, reason, trigger_name, params, secrets, proj_def):
     except Exception as e:
         raise _fail_unexpected(b, e)
 
-    trigger_runs(storage, proj_def, b, trigger, params, secrets)
+    trigger_runs(storage, proj_def, b, trigger, params, secrets, None)
     db.session.commit()
     return b
