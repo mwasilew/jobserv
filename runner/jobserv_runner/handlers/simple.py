@@ -404,7 +404,10 @@ class SimpleHandler(object):
             name = ts.attrib.get('name')
             if not name:
                 name = 'junit'
-            self.jobserv.add_test(name, context, result, results)
+            r = self.jobserv.add_test(name, context, result, results)
+            if r:
+                log.error('Unable to create test results on server: %d\n%s',
+                          r.status_code, r.text)
         return failed
 
     def test_suite_errors(self):
