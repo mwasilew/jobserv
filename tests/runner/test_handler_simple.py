@@ -217,6 +217,7 @@ class SimpleHandlerTest(TestCase):
         os.mkdir(archive)
         shutil.copy(
             os.path.join(os.path.dirname(__file__), 'junit.xml'), archive)
+        self.handler.jobserv.add_test.return_value = None
         self.assertTrue(self.handler.test_suite_errors())
         self.assertEqual('Sanitycheck',
                          self.handler.jobserv.add_test.call_args_list[0][0][0])
