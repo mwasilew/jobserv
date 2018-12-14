@@ -592,7 +592,7 @@ class Worker(db.Model):
 
     # we can't delete workers because the Run has foreign keys to them. This
     # flag allows us to exclude them from the api
-    deleted = db.Column(db.Boolean, default=False, nullable=False)
+    deleted = db.Column(db.Boolean, default=False)
 
     def __init__(self, name, distro, mem_total, cpu_total, cpu_type, api_key,
                  concurrent_runs, host_tags):
