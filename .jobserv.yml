@@ -1,4 +1,4 @@
-timeout: 5
+timeout: 10
 triggers:
   - name: merge-request
     type: github_pr
@@ -13,12 +13,24 @@ triggers:
         host-tag: amd64
         script: flake8
 
+  - name: build-container
+    type: git_poller
+    params:
+      GIT_URL: "https://github.com/foundriesio/jobserv.git"
+      GIT_POLL_REFS: "refs/heads/master"
+    runs:
+      - name: build-container
+        container: docker:dind
+        privileged: true
+        host-tag: amd64
+        script: build-container
+
   # This run is just handy for demonstration purposes as documented in the
   # tutorial
   - name: post-merge
     type: git_poller
     params:
-      GIT_URL: "https://github.com/linaro-technologies/jobserv.git"
+      GIT_URL: "https://github.com/foundriesio/jobserv.git"
       GIT_POLL_REFS: "refs/heads/master"
     runs:
       - name: flake8
@@ -39,3 +51,33 @@ scripts:
     git config --global user.email "cibot@example.com"
     git config --global user.name "cibot"
     ./unit-test.sh
+
+  build-container: |
+    #!/bin/sh -e
+    TAG=${GIT_SHA:0:6}
+
+    /usr/local/bin/dockerd-entrypoint.sh --raw-logs >$archive/dockerd.log 2>&1 &
+    for i in `seq 10` ; do
+        sleep 1
+        docker info >/dev/null 2>&1 && break
+        if [ $i = 10 ] ; then
+            echo 'Timed out trying to connect to internal docker host.' >&2
+            exit 1
+        fi
+    done
+
+    set -x
+    docker build -t doanac/jobserv:$TAG --force-rm .
+    docker tag doanac/jobserv:$TAG doanac/jobserv:latest
+
+    if [ -f /secrets/dockerpass ] ; then
+        set +x
+        token=$(cat /secrets/dockerpass)
+        mkdir -p $HOME/.docker
+        docker login --username=doanac --password=$token
+        set -x
+        docker push doanac/jobserv:$TAG
+        docker push doanac/jobserv:latest
+    else
+        echo "dockerpass not provided, skipping publishing step"
+    fi
