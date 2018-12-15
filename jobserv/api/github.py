@@ -21,11 +21,6 @@ from jobserv.trigger import trigger_build
 blueprint = Blueprint('api_github', __name__, url_prefix='/github')
 
 
-@blueprint.errorhandler(ApiError)
-def api_error(e):
-    return e.resp
-
-
 def _get_params(owner, repo, pr_num, token):
     headers = {
         'Content-Type': 'application/json',
