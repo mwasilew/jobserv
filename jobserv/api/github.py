@@ -3,6 +3,7 @@
 
 import hmac
 import logging
+import secrets
 import time
 import traceback
 import yaml
@@ -13,8 +14,9 @@ import requests
 
 from flask import Blueprint, request, url_for
 
+from jobserv.flask import permissions
 from jobserv.jsend import ApiError, get_or_404, jsendify
-from jobserv.models import Project, ProjectTrigger, TriggerTypes
+from jobserv.models import Project, ProjectTrigger, TriggerTypes, db
 from jobserv.settings import GITLAB_SERVERS, RUN_URL_FMT
 from jobserv.trigger import trigger_build
 
@@ -199,3 +201,67 @@ def on_webhook(proj):
         _fail_pr(repo, pr_num, params['GIT_SHA'], None, token)
         tb = traceback.format_exc()
         return 'FAILED: %s: %s\n%s' % (repo, pr_num, tb), 500
+
+
+def _register_github_hook(project, url, api_token, hook_token):
+    data = {
+        'name': 'web',
+        'active': True,
+        'events': [
+            'pull_request',
+            'pull_request_review_comment',
+            'issue_comment',
+        ],
+        'config': {
+            'url': url_for(
+                'api_github.on_webhook', proj=project.name, _external=True),
+            'content_type': 'json',
+            'secret': hook_token,
+        }
+    }
+    headers = {
+        'Content-Type': 'application/json',
+        'Authorization': 'token ' + api_token,
+    }
+
+    resp = requests.post(url, json=data, headers=headers)
+    if resp.status_code != 201:
+        raise ApiError(resp.status_code, resp.json())
+
+
+@blueprint.route('/<project:proj>/webhook/', methods=('POST',))
+def create_webhook(proj):
+    u = permissions.assert_internal_user()
+    p = get_or_404(Project.query.filter_by(name=proj))
+
+    d = request.get_json() or {}
+    required = ('githubtok', 'owner', 'project')
+    missing = []
+    for x in required:
+        if x not in d:
+            missing.append(x)
+    if missing:
+        raise ApiError(401, 'Missing parameters: %s' % ','.join(missing))
+
+    owner = d.pop('owner')
+    hook_url = 'https://api.github.com/repos/%s/%s/hooks'
+    hook_url = hook_url % (owner, d.pop('project'))
+
+    d['webhook-key'] = secrets.token_urlsafe()
+    dr = df = None
+    try:
+        dr = d.pop('definition_repo')
+        df = d.pop('definition_file')
+    except KeyError:
+        pass
+
+    user = owner
+    if u:
+        user = str(u)
+
+    db.session.add(ProjectTrigger(
+        user, TriggerTypes.github_pr.value, p, dr, df, d))
+
+    _register_github_hook(p, hook_url, d['githubtok'], d['webhook-key'])
+    db.session.commit()
+    return jsendify({}, 201)
