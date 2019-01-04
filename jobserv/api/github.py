@@ -82,7 +82,7 @@ def _get_proj_def(trigger, owner, repo, sha, token):
 
     resp = requests.get(url, headers=headers)
     if resp.status_code == 200:
-        data = yaml.load(resp.text)
+        data = yaml.safe_load(resp.text)
         for trigger in data.get('triggers', []):
             if trigger['type'] == 'github_pr':
                 return trigger['name'], data

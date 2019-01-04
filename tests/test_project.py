@@ -25,13 +25,13 @@ class ProjectSchemaTest(JobServTest):
             if f[0] == '.':  # a vim swap file :)
                 continue
             with open(os.path.join(self.examples, f)) as f:
-                data = yaml.load(f)
+                data = yaml.safe_load(f)
                 ProjectDefinition.validate_data(data)
 
     def test_simple_bad(self):
         # just make a schema with no "timeout" and ensure it fails
         with open(os.path.join(self.examples, 'python-github.yml')) as f:
-            data = yaml.load(f)
+            data = yaml.safe_load(f)
             del data['timeout']
             exp = "Cannot find required key 'timeout'"
             with self.assertRaisesRegex(Exception, exp):
@@ -39,7 +39,7 @@ class ProjectSchemaTest(JobServTest):
 
     def test_bad_script(self):
         with open(os.path.join(self.examples, 'python-github.yml')) as f:
-            data = yaml.load(f)
+            data = yaml.safe_load(f)
             data['triggers'][0]['runs'][0]['script'] = 'doesnotexist'
             exp = 'Script does not exist'
             with self.assertRaisesRegex(Exception, exp):
@@ -47,7 +47,7 @@ class ProjectSchemaTest(JobServTest):
 
     def test_bad_script_repo(self):
         with open(os.path.join(self.examples, 'python-github.yml')) as f:
-            data = yaml.load(f)
+            data = yaml.safe_load(f)
             del data['triggers'][0]['runs'][0]['script']
             data['triggers'][0]['runs'][0]['script-repo'] = {
                 'name': 'doesnotexsit',
@@ -59,7 +59,7 @@ class ProjectSchemaTest(JobServTest):
 
     def test_bad_script_mutual_exclusion(self):
         with open(os.path.join(self.examples, 'python-github.yml')) as f:
-            data = yaml.load(f)
+            data = yaml.safe_load(f)
             data['triggers'][0]['runs'][0]['script-repo'] = {
                 'name': 'doesnotexsit',
                 'path': 'path',
@@ -70,7 +70,7 @@ class ProjectSchemaTest(JobServTest):
 
     def test_bad_trigger(self):
         with open(os.path.join(self.examples, 'python-github.yml')) as f:
-            data = yaml.load(f)
+            data = yaml.safe_load(f)
             data['triggers'][0]['type'] = 'doesnotexist'
             exp = 'No such runner'
             with self.assertRaisesRegex(Exception, exp):
@@ -78,7 +78,7 @@ class ProjectSchemaTest(JobServTest):
 
     def test_recursive_run_trigger(self):
         with open(os.path.join(self.examples, 'python-github.yml')) as f:
-            data = yaml.load(f)
+            data = yaml.safe_load(f)
             # cause an infinite loop for triggers
             data['triggers'][0]['runs'][0]['triggers'] = [
                 {'name': 'unit-test'},
@@ -89,7 +89,7 @@ class ProjectSchemaTest(JobServTest):
 
     def test_recursive_build_trigger(self):
         with open(os.path.join(self.examples, 'python-github.yml')) as f:
-            data = yaml.load(f)
+            data = yaml.safe_load(f)
             # cause an infinite loop for triggers
             data['triggers'][0]['triggers'] = [
                 {'name': 'unit-test'},
@@ -100,7 +100,7 @@ class ProjectSchemaTest(JobServTest):
 
     def test_run_name_too_long(self):
         with open(os.path.join(self.examples, 'python-github.yml')) as f:
-            data = yaml.load(f)
+            data = yaml.safe_load(f)
             # cause an infinite loop for triggers
             data['triggers'][0]['runs'][0]['name'] = '1' * 80
             exp = 'Name of run must be less than 80 characters'
@@ -109,7 +109,7 @@ class ProjectSchemaTest(JobServTest):
 
     def test_loop_on(self):
         with open(os.path.join(self.examples, 'python-github.yml')) as f:
-            data = yaml.load(f)
+            data = yaml.safe_load(f)
             run = {
                 'name': 'compile-{loop}',
                 'container': 'foo',
@@ -162,7 +162,7 @@ class ProjectSchemaTest(JobServTest):
 
     def test_script_repo_rundef(self):
         with open(os.path.join(self.examples, 'python-github.yml')) as f:
-            data = yaml.load(f)
+            data = yaml.safe_load(f)
             del data['triggers'][0]['runs'][0]['script']
             data['triggers'][0]['runs'][0]['script-repo'] = {
                 'name': 'foo',
@@ -185,7 +185,7 @@ class ProjectSchemaTest(JobServTest):
     def test_script_repo_token(self, url_for):
         url_for.return_value = 'blah'
         with open(os.path.join(self.examples, 'python-github.yml')) as f:
-            data = yaml.load(f)
+            data = yaml.safe_load(f)
             del data['triggers'][0]['runs'][0]['script']
             data['triggers'][0]['runs'][0]['script-repo'] = {
                 'name': 'foo',
@@ -206,7 +206,7 @@ class ProjectSchemaTest(JobServTest):
 
     def test_bad_container_auth(self):
         with open(os.path.join(self.examples, 'private-container.yml')) as f:
-            data = yaml.load(f)
+            data = yaml.safe_load(f)
             proj = ProjectDefinition.validate_data(data)
 
             dbrun = Mock()
@@ -222,7 +222,7 @@ class ProjectSchemaTest(JobServTest):
 
     def test_host_tag_rundef(self):
         with open(os.path.join(self.examples, 'host-tag.yml')) as f:
-            data = yaml.load(f)
+            data = yaml.safe_load(f)
             ProjectDefinition.validate_data(data)
             proj = ProjectDefinition(data)
             dbrun = Mock()
@@ -238,7 +238,7 @@ class ProjectSchemaTest(JobServTest):
 
     def test_host_tag_rundef_loopon(self):
         with open(os.path.join(self.examples, 'host-tag.yml')) as f:
-            data = yaml.load(f)
+            data = yaml.safe_load(f)
             ProjectDefinition.validate_data(data)
             proj = ProjectDefinition(data)
             dbrun = Mock()
@@ -260,7 +260,7 @@ class ProjectSchemaTest(JobServTest):
 
     def test_host_tag_rundef_loopon_bad(self):
         with open(os.path.join(self.examples, 'host-tag.yml')) as f:
-            data = yaml.load(f)
+            data = yaml.safe_load(f)
             data['triggers'][0]['runs'][1]['loop-on'][0]['param'] = 'host-tagz'
             exp = '"host-tag" or loop-on host-tag parameter required'
             with self.assertRaisesRegex(Exception, exp):

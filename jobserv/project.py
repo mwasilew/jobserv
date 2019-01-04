@@ -240,5 +240,5 @@ if __name__ == '__main__':
     import sys
     import yaml
     print('# Reading project-defintion.yml from stdin')
-    data = yaml.load(sys.stdin)
+    data = yaml.safe_load(sys.stdin)
     print(yaml.dump(ProjectDefinition(data)._data, default_flow_style=False))

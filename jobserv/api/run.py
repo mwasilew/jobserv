@@ -89,7 +89,7 @@ def _handle_triggers(storage, run):
         return
 
     projdef = ProjectDefinition(
-        yaml.load(storage.get_project_definition(run.build)))
+        yaml.safe_load(storage.get_project_definition(run.build)))
     rundef = json.loads(storage.get_run_definition(run))
     secrets = rundef.get('secrets')
     params = rundef.get('env', {})

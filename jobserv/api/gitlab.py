@@ -88,7 +88,7 @@ def _get_proj_def(trigger, token, params):
     }
     resp = requests.get(url, headers=headers)
     if resp.status_code == 200:
-        data = yaml.load(resp.text)
+        data = yaml.safe_load(resp.text)
         for trigger in data.get('triggers', []):
             if trigger['type'] == 'gitlab_mr':
                 return trigger['name'], data

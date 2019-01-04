@@ -4,12 +4,12 @@ triggers:
     type: github_pr
     runs:
       - name: unit-test
-        container: python:3.5-alpine
+        container: python:3.6-alpine
         host-tag: amd64
         script: unit-test
 
       - name: flake8
-        container: python:3.5-alpine
+        container: python:3.6-alpine
         host-tag: amd64
         script: flake8
 

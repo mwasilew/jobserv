@@ -20,7 +20,7 @@ def _validate(args):
     if url[-1] != '/':
         url += '/'
     url += 'simulator-validate'
-    data = yaml.load(args.proj_def)
+    data = yaml.safe_load(args.proj_def)
     r = requests.post(url, json=data)
     if r.status_code != 200:
         try:
@@ -217,7 +217,7 @@ def _run(args):
 
 def _test_grep(args):
     with open(args.proj_def) as f:
-        proj_def = yaml.load(f)
+        proj_def = yaml.safe_load(f)
 
     trigger = _get_trigger(proj_def, args.trigger_name)
     run = _get_run(trigger, args.run_name)
