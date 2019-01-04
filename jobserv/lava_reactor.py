@@ -79,7 +79,7 @@ def _update_status(test, status, msg, results=None):
 
 def _get_results(yaml_buff):
     status = 'FAILED'
-    res_data = yaml.load(yaml_buff)
+    res_data = yaml.safe_load(yaml_buff)
     if set([x['result'] for x in res_data]) == set(['pass']):
         status = 'PASSED'
     results = []

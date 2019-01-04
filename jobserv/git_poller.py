@@ -72,7 +72,7 @@ def _get_projdef(name, proj):
     if r.status_code == 200:
         try:
             log.info('New version of project definition found for %s', url)
-            data = yaml.load(r.text)
+            data = yaml.safe_load(r.text)
             ProjectDefinition.validate_data(data)
             proj['definition'] = ProjectDefinition(data)
             # allows us to cache the resp
