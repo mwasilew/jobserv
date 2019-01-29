@@ -456,6 +456,13 @@ def _docker_clean():
         log.exception(e)
 
 
+def _reap_pids():
+    try:
+        os.wait3(os.WNOHANG)
+    except ChildProcessError:
+        pass   # No children have exited, that's fine
+
+
 def cmd_loop(args):
     # Ensure no other copy of this script is running
     try:
@@ -477,6 +484,7 @@ def cmd_loop(args):
                 log.debug('Calling check')
                 if FEATURE_NEW_LOOPER:
                     log.debug('Running with new non-forking looper')
+                    _reap_pids()
                     cmd_check(args)
                 else:
                     rc = subprocess.call(cmd_args)
