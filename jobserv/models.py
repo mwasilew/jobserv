@@ -568,6 +568,11 @@ class TestResult(db.Model, StatusMixin):
         self.name = name
         self.context = context
         self.status = status
+        maxlen = 65535
+        if output and len(output) > maxlen:
+            # truncate for db
+            prefix = '<truncated>\n'
+            output = prefix + output[:maxlen - len(prefix)]
         self.output = output
 
     def __repr__(self):
