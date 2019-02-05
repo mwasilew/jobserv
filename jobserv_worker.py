@@ -458,9 +458,12 @@ def _docker_clean():
 
 def _reap_pids():
     try:
-        os.wait3(os.WNOHANG)
+        os.waitpid(-1, os.WNOHANG)
     except ChildProcessError:
         pass   # No children have exited, that's fine
+    except Exception:
+        # Just catch and log so the daemon doesn't die
+        log.exception('Unexpected error wait for pids')
 
 
 def cmd_loop(args):
