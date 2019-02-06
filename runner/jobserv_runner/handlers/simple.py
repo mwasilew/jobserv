@@ -3,6 +3,7 @@
 
 import contextlib
 import fcntl
+import glob
 import json
 import io
 import xml.etree.ElementTree as ET
@@ -421,13 +422,14 @@ class SimpleHandler(object):
     def test_suite_errors(self):
         """Look for artifacts like junit.xml and automatically create Test
            and TestResult objects for the Run."""
-        junit = os.path.join(self.run_dir, 'archive/junit.xml')
-        try:
-            with open(junit) as f:
-                with self.log_context('Analyzing junit results') as log:
-                    return self._junit_errors(log, f.read())
-        except FileNotFoundError:
-            pass
+        pattern = os.path.join(self.run_dir, 'archive/junit.xml*')
+        errors = False
+        for path in glob.glob(pattern):
+            with open(path) as f:
+                msg = 'Analyzing junit results(%s)' % path
+                with self.log_context(msg) as log:
+                    errors |= self._junit_errors(log, f.read())
+        return errors
 
     def upload_artifacts(self):
         self.jobserv.update_status('UPLOADING', 'Finding artifacts to upload')
