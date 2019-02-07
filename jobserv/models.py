@@ -677,7 +677,7 @@ class Worker(db.Model):
         if not os.path.exists(path):
             os.makedirs(os.path.dirname(path))
         now = time.time()
-        vals = ','.join(['%s=%s' % (k, v[0]) for k, v in kwargs.items()])
+        vals = ','.join(['%s=%s' % (k, v) for k, v in kwargs.items()])
         with open(path, 'a') as f:
             f.write('%d: %s\n' % (now, vals))
         try:

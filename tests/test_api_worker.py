@@ -58,7 +58,7 @@ class WorkerAPITest(JobServTest):
             ('Content-type', 'application/json'),
             ('Authorization', 'Token key'),
         ]
-        qs = 'num_available=1&foo=4'
+        qs = 'num_available=1&foo=40'
         resp = self.client.get(
             '/workers/w1/', headers=headers, query_string=qs)
         self.assertEqual(200, resp.status_code)
@@ -67,7 +67,7 @@ class WorkerAPITest(JobServTest):
         with open(p) as f:
             buf = f.read()
             self.assertIn('num_available=1', buf)
-            self.assertIn('foo=4', buf)
+            self.assertIn('foo=40', buf)
 
     def test_worker_log_event(self):
         w = Worker('w1', 'ubuntu', 12, 2, 'aarch64', 'key', 2, [])
