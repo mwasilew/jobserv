@@ -409,6 +409,7 @@ class Run(db.Model, StatusMixin):
                 'api_test.test_list', proj=p.name, build_id=b.build_id,
                 run=self.name, _external=True)
         if detailed:
+            data['worker_name'] = self.worker_name
             data['status_events'] = [{'time': x.time, 'status': x.status.name}
                                      for x in self.status_events]
         return data
