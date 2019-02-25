@@ -5,7 +5,7 @@ import json
 
 from unittest.mock import patch
 
-from jobserv.models import Project
+from jobserv.models import Build, BuildStatus, Project, Run, db
 from jobserv.permissions import _sign
 
 from tests import JobServTest
@@ -52,3 +52,23 @@ class ProjectAPITest(JobServTest):
             url, headers=headers, data=json.dumps({'name': 'foo'}))
         self.assertEqual(201, r.status_code, r.data)
         Project.query.filter(Project.name == 'foo').one()
+
+    def test_project_run_history(self):
+        self.create_projects('proj-1')
+        p = Project.query.all()[0]
+
+        for x in range(4):
+            b = Build.create(p)
+            r = Run(b, 'run0')
+            r.status = BuildStatus.PASSED
+            if x % 2 == 0:
+                r.status = BuildStatus.FAILED
+            db.session.add(r)
+            r = Run(b, 'run1')
+            db.session.add(r)
+        db.session.commit()
+        r = self.get_json('/projects/proj-1/history/run0/')
+        expected = ['PASSED', 'FAILED', 'PASSED', 'FAILED']
+        self.assertEqual(expected, [x['status'] for x in r['runs']])
+        expected = ['run0', 'run0', 'run0', 'run0']
+        self.assertEqual(expected, [x['name'] for x in r['runs']])

@@ -4,8 +4,8 @@
 from flask import Blueprint, request, url_for
 
 from jobserv.flask import permissions
-from jobserv.jsend import ApiError, get_or_404, jsendify
-from jobserv.models import Project, TriggerTypes, db
+from jobserv.jsend import ApiError, get_or_404, jsendify, paginate_custom
+from jobserv.models import Build, BuildStatus, Project, Run, TriggerTypes, db
 
 blueprint = Blueprint('api_project', __name__, url_prefix='/projects')
 
@@ -35,6 +35,29 @@ def project_create():
 def project_get(proj):
     p = get_or_404(Project.query.filter_by(name=proj))
     return jsendify({'project': p.as_json(detailed=True)})
+
+
+@blueprint.route('/<project:proj>/history/<run>/', methods=('GET',))
+def project_run_history(proj, run):
+    q = Run.query.join(
+        Build, Project
+    ).filter(
+        Project.name == proj, Run.name == run
+    ).order_by(
+        -Build.id
+    )
+
+    def render(run):
+        r = run.as_json(detailed=True)
+        r['build'] = run.build.build_id
+        for x in reversed(run.status_events):
+            if x.status == BuildStatus.RUNNING:
+                d = run.status_events[-1].time - x.time
+                r['duration_seconds'] = d.total_seconds()
+                break
+        return r
+
+    return paginate_custom('runs', q, render)
 
 
 @blueprint.route('/<project:proj>/triggers/', methods=('GET',))
