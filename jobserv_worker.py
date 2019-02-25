@@ -499,6 +499,8 @@ def cmd_loop(args):
                     next_clean = time.time() + (args.docker_rm * 3600)
                 else:
                     time.sleep(args.every)
+        except ConnectionError:
+            log.exception('Unable to check in with server, retrying now')
         except KeyboardInterrupt:
             log.info('Keyboard interrupt received, exiting')
             return
