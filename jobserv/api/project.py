@@ -5,7 +5,8 @@ from flask import Blueprint, request, url_for
 
 from jobserv.flask import permissions
 from jobserv.jsend import ApiError, get_or_404, jsendify, paginate_custom
-from jobserv.models import Build, BuildStatus, Project, Run, TriggerTypes, db
+from jobserv.models import (
+    Build, BuildStatus, Project, ProjectTrigger, Run, TriggerTypes, db)
 
 blueprint = Blueprint('api_project', __name__, url_prefix='/projects')
 
@@ -70,3 +71,30 @@ def project_trigger_list(proj):
     if t:
         triggers = [x for x in triggers if x.type == TriggerTypes[t].value]
     return jsendify([x.as_json() for x in triggers])
+
+
+@blueprint.route('/<project:proj>/triggers/', methods=('POST',))
+def project_create_trigger(proj):
+    u = permissions.assert_internal_user()
+    p = get_or_404(Project.query.filter_by(name=proj))
+
+    d = request.get_json() or {}
+    ttype = d.pop('type')
+    if not ttype:
+        raise ApiError(401, 'Missing parameter: type')
+    ttype = TriggerTypes[ttype].value
+
+    owner = d.pop('owner')
+    if u:
+        owner = str(u)
+    dr = df = None
+    try:
+        dr = d.pop('definition_repo')
+        df = d.pop('definition_file')
+    except KeyError:
+        pass
+
+    db.session.add(ProjectTrigger(owner, ttype, p, dr, df, d))
+
+    db.session.commit()
+    return jsendify({}, 201)

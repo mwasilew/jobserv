@@ -5,7 +5,7 @@ import json
 
 from unittest.mock import patch
 
-from jobserv.models import Build, BuildStatus, Project, Run, db
+from jobserv.models import Build, BuildStatus, Project, Run, TriggerTypes, db
 from jobserv.permissions import _sign
 
 from tests import JobServTest
@@ -72,3 +72,23 @@ class ProjectAPITest(JobServTest):
         self.assertEqual(expected, [x['status'] for x in r['runs']])
         expected = ['run0', 'run0', 'run0', 'run0']
         self.assertEqual(expected, [x['name'] for x in r['runs']])
+
+    def test_project_trigger_create(self):
+        self.create_projects('proj-1')
+        url = 'http://localhost/projects/proj-1/triggers/'
+
+        headers = {'Content-type': 'application/json'}
+        _sign(url, headers, 'POST')
+        data = {
+            'owner': 'gavin.gavel',
+            'type': 'git_poller',
+            'secret1': 'ThisIsThePassword',
+        }
+        r = self.client.post(url, headers=headers, data=json.dumps(data))
+        self.assertEqual(201, r.status_code, r.data)
+        p = Project.query.filter(Project.name == 'proj-1').one()
+        self.assertEqual(1, len(p.triggers))
+        t = p.triggers[0]
+        self.assertEqual(TriggerTypes.git_poller.value, t.type)
+        self.assertEqual(data['owner'], t.user)
+        self.assertEqual(data['secret1'], t.secret_data['secret1'])
