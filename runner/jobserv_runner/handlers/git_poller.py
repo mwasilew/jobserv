@@ -4,38 +4,50 @@
 import os
 import urllib.parse
 
+from base64 import b64encode
+
 from jobserv_runner.handlers.simple import HandlerError, SimpleHandler
 
 
+def b64(val):
+    return b64encode(val.encode()).decode()
+
+
 class GitPoller(SimpleHandler):
-    def _get_http_clone_token(self, clone_url):
+    def _get_http_header(self, log, clone_url):
         secrets = self.rundef.get('secrets', {})
         if clone_url.startswith('https://github.com'):
             tok = secrets.get('githubtok')
             if tok:
-                return tok
+                log.info('Using github secret to clone repo')
+                return 'Authorization: Basic ' + b64(tok)
 
         # we can't determine by URL if its a gitlab repo, so just assume
         # the rundef/secrets are done sanely by the user
         env = self.rundef['env']
         user = env.get('gitlabuser') or secrets.get('gitlabuser')
         if user:
+            log.info('Using gitlab secret to clone repo')
             token = self.rundef['secrets']['gitlabtok']
-            return user + ':' + token
+            return 'Authorization: Basic ' + b64(user + ':' + token)
+
+        secrets = self.rundef.get('secrets', {})
+        header = secrets.get('git.http.extraheader')
+        if header:
+            log.info('Using git.http.extraheader to clone repo')
+        return header
 
     def _clone(self, log, dst):
         clone_url = self.rundef['env']['GIT_URL']
         log.info('Clone_url: %s', clone_url)
 
-        token = self._get_http_clone_token(clone_url)
-        if token:
-            log.info('Using an HTTP token for cloning')
-            p = urllib.parse.urlsplit(clone_url)
-            clone_url = p.scheme + '://' + token + '@' + p.netloc + p.path
-
-        if not log.exec(['git', 'clone', clone_url, dst]):
-            raise HandlerError(
-                'Unable to clone: ' + self.rundef['env']['GIT_URL'])
+        args = ['git']
+        header = self._get_http_header(log, clone_url)
+        if header:
+            args.extend(['-c', 'http.extraheader=' + header])
+        args.extend(['clone', clone_url, dst])
+        if not log.exec(args):
+            raise HandlerError('Unable to clone: ' + clone_url)
 
         sha = self.rundef['env'].get('GIT_SHA')
         if sha:

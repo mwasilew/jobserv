@@ -49,10 +49,7 @@ def _get_projdef(name, proj):
     if not defile:
         defile = name + '.yml'
     gitlab = proj['poller_def'].get('secrets', {}).get('gitlabtok')
-
-    if 'github.com' not in repo and not gitlab:
-        log.error('Only GitHub and GitlLab repos are supported')
-        return None
+    gheader = proj['poller_def'].get('secrets', {}).get('git.http.extraheader')
 
     headers = proj.setdefault('projdef_headers', {})
     token = proj['poller_def'].get('secrets', {}).get('githubtok')
@@ -62,13 +59,25 @@ def _get_projdef(name, proj):
     if gitlab:
         headers['PRIVATE-TOKEN'] = gitlab
         url = repo.replace('.git', '') + '/raw/master/' + defile
-    else:
+    elif 'github' in repo:
         url = repo.replace('github.com', 'raw.githubusercontent.com')
         if url[-1] != '/':
             url += '/'
         url += 'master/' + defile
+    else:
+        url = repo
+        if not url.endswith('.git'):
+            url += '.git'
+        url = repo + '/plain/' + defile
+        log.info('Assuming CGit style URL to file: %s', url)
 
     r = requests.get(url, headers=headers)
+    if r.status_code == 401 and gheader:
+        log.info('Authorization required using git header in secrets')
+        key, val = gheader.split(':', 1)
+        headers[key.strip()] = val.strip()
+        r = requests.get(url, headers=headers)
+
     if r.status_code == 200:
         try:
             log.info('New version of project definition found for %s', url)
@@ -91,12 +100,14 @@ def _get_projdef(name, proj):
 
 
 def _get_refs(repo_url, proj):
+    secrets = proj['poller_def'].get('secrets', {})
     auth = None
-    ghtok = proj['poller_def'].get('secrets', {}).get('githubtok')
+    ghtok = secrets.get('githubtok')
     if ghtok:
         auth = HTTPBasicAuth(proj['poller_def']['user'], ghtok)
 
-    gltok = proj['poller_def'].get('secrets', {}).get('gitlabtok')
+    gltok = secrets.get('gitlabtok')
+    git_header = secrets.get('git.http.extraheader')
 
     if not repo_url.endswith('.git'):
         # access these URL on github requires .git and it seems to be needed
@@ -116,6 +127,13 @@ def _get_refs(repo_url, proj):
         resp = requests.get(repo_url)
         # TODO flag this as a gitlab repo and then add in logic like
         # _github_log below
+    elif git_header and resp.status_code == 401:
+        key, val = git_header.split(':', 1)
+        headers = {
+            key.strip(): val.strip(),
+            'User-Agent': 'git',
+        }
+        resp = requests.get(repo_url, headers=headers)
 
     if resp.status_code != 200:
         log.error('Unable to check %s for changes: %d %s',

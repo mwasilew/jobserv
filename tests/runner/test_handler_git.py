@@ -90,3 +90,40 @@ class GitPollerHandlerTest(TestCase):
         msg = 'Unable to branch: badbeef'
         with self.assertRaisesRegex(HandlerError, msg):
             self.handler.prepare_mounts()
+
+    def test_private_github(self):
+        clone_url = 'https://github.com/nosuchorog/nosuchrepo'
+        self.handler.rundef = {
+            'script': '',
+            'persistent-volumes': None,
+            'run_url': 'foo',
+            'env': {
+                'GIT_URL': clone_url,
+                'GIT_SHA': 'badbeef',
+            },
+            'secrets': {
+                'githubtok': 'ThisIsTestGitHubToken',
+            }
+        }
+        header = self.handler._get_http_header(mock.Mock(), clone_url)
+        self.assertEqual(
+            'Authorization: Basic VGhpc0lzVGVzdEdpdEh1YlRva2Vu', header)
+
+    def test_private_gitlab(self):
+        clone_url = 'https://git.com/nosuchorog/nosuchrepo'
+        self.handler.rundef = {
+            'script': '',
+            'persistent-volumes': None,
+            'run_url': 'foo',
+            'env': {
+                'GIT_URL': clone_url,
+                'GIT_SHA': 'badbeef',
+            },
+            'secrets': {
+                'gitlabuser': 'foo',
+                'gitlabtok': 'ThisIsTestGitLab',
+            }
+        }
+        header = self.handler._get_http_header(mock.Mock(), clone_url)
+        self.assertEqual(
+            'Authorization: Basic Zm9vOlRoaXNJc1Rlc3RHaXRMYWI=', header)
