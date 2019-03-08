@@ -111,6 +111,7 @@ class ProjectTrigger(db.Model):
     definition_repo = db.Column(db.String(512))
     definition_file = db.Column(db.String(512))
     secrets = db.Column(db.Text())
+    queue_priority = db.Column(db.Integer)  # bigger is more important
 
     project = db.relationship(Project)
 
@@ -132,6 +133,7 @@ class ProjectTrigger(db.Model):
             'project': self.project.name,
             'definition_repo': self.definition_repo,
             'definition_file': self.definition_file or None,
+            'queue_priority': self.queue_priority or 0,
             'secrets': self.secret_data,
         }
 
@@ -357,6 +359,7 @@ class Run(db.Model, StatusMixin):
     meta = db.Column(db.String(1024))
 
     worker_name = db.Column(db.String(512), db.ForeignKey('workers.name'))
+    queue_priority = db.Column(db.Integer)  # bigger is more important
 
     host_tag = db.Column(db.String(1024))
 
@@ -375,11 +378,12 @@ class Run(db.Model, StatusMixin):
         db.UniqueConstraint('build_id', 'name', name='run_name_uc'),
     )
 
-    def __init__(self, build, name, trigger=None):
+    def __init__(self, build, name, trigger=None, queue_priority=0):
         self.build_id = build.id
         self.name = name
         self.trigger = trigger
         self.status = BuildStatus.QUEUED
+        self.queue_priority = queue_priority
         self.api_key = ''.join(random.SystemRandom().choice(
             string.ascii_lowercase + string.ascii_uppercase + string.digits)
             for _ in range(32))
@@ -445,7 +449,10 @@ class Run(db.Model, StatusMixin):
 
         # this is a trick to allow us to find the ID of the row we updated
         id_trick = 'id = @run_id := id'
-        limit = 'ORDER BY `build_id`, `id` asc LIMIT 1'
+        # NOTE - updates with ordering are not honored by unit testing with
+        # sqlite because this feature isn't compiled in by default:
+        #  https://www.sqlite.org/compile.html#enable_update_delete_limit
+        limit = 'ORDER BY `queue_priority` desc, `build_id`, `id` asc LIMIT 1'
         if Run.in_test_mode:
             # of course, sqlite isn't advanced enough, so we hack something
             # for unit-testing
