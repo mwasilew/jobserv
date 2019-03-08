@@ -24,6 +24,11 @@ class GitPollerHandlerTest(TestCase):
         os.mkdir(wdir)
         self.handler = GitPoller(wdir, rdir, mock.Mock(), None)
 
+        def no(self):
+            return True
+
+        self.handler._needs_auth = no
+
     def _create_repo(self):
         repo_src = os.path.join(self.tmpdir, 'repo-src')
         os.mkdir(repo_src)

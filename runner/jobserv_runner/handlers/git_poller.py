@@ -4,6 +4,8 @@
 import os
 import urllib.parse
 
+import requests
+
 from base64 import b64encode
 
 from jobserv_runner.handlers.simple import HandlerError, SimpleHandler
@@ -14,7 +16,25 @@ def b64(val):
 
 
 class GitPoller(SimpleHandler):
+    def _needs_auth(self, repo_url):
+        if not repo_url.endswith('.git'):
+            repo_url += '.git'
+        if repo_url[-1] != '/':
+            repo_url += '/'
+        repo_url += 'info/refs?service=git-upload-pack'
+        resp = requests.get(repo_url)
+        return resp.status_code != 200
+
     def _get_http_header(self, log, clone_url):
+        # Its hard to know if the clone_url needs authentication or not. The
+        # github, gitlab, or git.http.extraheader secrets *could* be for
+        # secondary repositories used in the actual CI script. This is a simple
+        # way to see if we need the creds *before* we try and pass them to
+        # the server
+        log.info('Checking to see if %s requires authentication.', clone_url)
+        if not self._needs_auth(clone_url):
+            log.info('Server does not appear to need credentials for cloning')
+            return
         secrets = self.rundef.get('secrets', {})
         if clone_url.startswith('https://github.com'):
             tok = secrets.get('githubtok')
