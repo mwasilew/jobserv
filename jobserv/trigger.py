@@ -39,7 +39,7 @@ def _check_for_trigger_upgrade(rundef, trigger_type, parent_trigger_type):
 
 
 def trigger_runs(storage, projdef, build, trigger, params, secrets,
-                 parent_type):
+                 parent_type, queue_priority=0):
     name_fmt = trigger.get('run-names')
     try:
         for run in trigger['runs']:
@@ -52,7 +52,7 @@ def trigger_runs(storage, projdef, build, trigger, params, secrets,
                 # and a caller would need to call db.session.rollback which
                 # would cause them to lose the lock.
                 raise ValueError('A run named "%s" already exists' % name)
-            r = Run(build, name, trigger['name'])
+            r = Run(build, name, trigger['name'], queue_priority)
             db.session.add(r)
             db.session.flush()
             rundef = projdef.get_run_definition(
@@ -95,7 +95,8 @@ def _fail_unexpected(build, exception):
     return exception
 
 
-def trigger_build(project, reason, trigger_name, params, secrets, proj_def):
+def trigger_build(project, reason, trigger_name, params, secrets, proj_def,
+                  queue_priority=0):
     proj_def = ProjectDefinition.validate_data(proj_def)
     b = Build.create(project)
     try:
@@ -113,6 +114,7 @@ def trigger_build(project, reason, trigger_name, params, secrets, proj_def):
     except Exception as e:
         raise _fail_unexpected(b, e)
 
-    trigger_runs(storage, proj_def, b, trigger, params, secrets, None)
+    trigger_runs(storage, proj_def, b, trigger, params, secrets, None,
+                 queue_priority)
     db.session.commit()
     return b

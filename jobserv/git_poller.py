@@ -236,6 +236,7 @@ def _trigger(name, proj, projdef, trigger_name, change_params):
         'secrets': proj['poller_def'].get('secrets', {}),
         'project-definition': projdef._data,
         'reason': json.dumps(change_params, indent=2),
+        'queue-priority': proj['poller_def'].get('queue_priority', 0),
     }
     p = urlparse(change_params['GIT_URL'])
     url = p.scheme + '://' + p.netloc

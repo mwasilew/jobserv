@@ -187,7 +187,8 @@ def on_webhook(proj):
     try:
         trig, proj = _get_proj_def(
             trigger, owner, repo, params['GIT_SHA'], token)
-        b = trigger_build(trigger.project, reason, trig, params, secrets, proj)
+        b = trigger_build(trigger.project, reason, trig, params, secrets, proj,
+                          trigger.queue_priority)
         _update_pr(b, params['GH_STATUS_URL'], token)
         url = url_for('api_build.build_get',
                       proj=trigger.project.name, build_id=b.build_id,

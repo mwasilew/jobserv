@@ -29,7 +29,8 @@ def build_create(proj):
     d = request.get_json() or {}
     b = trigger_build(p, d.get('reason'), d.get('trigger-name'),
                       d.get('params'), d.get('secrets'),
-                      d.get('project-definition'))
+                      d.get('project-definition'),
+                      d.get('queue-priority', 0))
     url = url_for('api_build.build_get',
                   proj=p.name, build_id=b.build_id, _external=True)
     return jsendify({'url': url}, 201)

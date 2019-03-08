@@ -185,7 +185,8 @@ def on_webhook(proj):
     try:
         _set_base_sha(params, token)
         trig, proj = _get_proj_def(trigger, token, params)
-        b = trigger_build(trigger.project, reason, trig, params, secrets, proj)
+        b = trigger_build(trigger.project, reason, trig, params, secrets, proj,
+                          trigger.queue_priority)
         _update_pr(b, params['GL_STATUS_URL'], token)
         url = url_for('api_build.build_get',
                       proj=trigger.project.name, build_id=b.build_id,
