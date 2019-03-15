@@ -31,7 +31,7 @@ def run_health():
 
     active = (BuildStatus.QUEUED, BuildStatus.RUNNING, BuildStatus.UPLOADING)
     runs = Run.query.filter(Run.status.in_(active)).order_by(
-        Run.queue_priority.desc(), Run.build_id.asc(), Run.id.asc())
+        Run.queue_priority.asc(), Run.build_id.asc(), Run.id.asc())
     for run in runs:
         url = url_for('api_run.run_get', proj=run.build.project.name,
                       build_id=run.build.build_id,

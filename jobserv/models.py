@@ -452,7 +452,7 @@ class Run(db.Model, StatusMixin):
         # NOTE - updates with ordering are not honored by unit testing with
         # sqlite because this feature isn't compiled in by default:
         #  https://www.sqlite.org/compile.html#enable_update_delete_limit
-        limit = 'ORDER BY `queue_priority` desc, `build_id`, `id` asc LIMIT 1'
+        limit = 'ORDER BY `queue_priority`, `build_id`, `id` asc LIMIT 1'
         if Run.in_test_mode:
             # of course, sqlite isn't advanced enough, so we hack something
             # for unit-testing
