@@ -4,6 +4,17 @@ The JobServ component can be thought of at a high level as something similar to
 Jenkins. However, several design decisions have been made to make sure the
 service can be highly available and horizontally scalable.
 
+The main implementation of JobServ is at https://ci.foundries.io. This service
+does lots of interesting CI including:
+
+ * bare-metal testing for both Linux and Zephyr class devices
+ * tradition CI building of code
+ * building of containers using docker-in-docker
+ * release deployment logic
+ * handling about 20 different CI workers with no perceptible downtime
+ * live updates of the system (including the k8s node updates of the backend
+   MySQL cluster) while CI jobs are in progress.
+
 ## Yet Another CI Server?
 
 We had a few seemingly simple requirements for a CI server. After looking at
@@ -33,7 +44,8 @@ these items:
    inside your CI system than its failing you. The thing should just work in
    the background and point you to the failure when you need to know. A GUI
    is really a must, but getting everything else nailed down makes you care a
-   whole lot less.
+   whole lot less. That said we've built one:
+   [gavel-ci](https://ci.foundries.io).
 
  * *Test Locally* - If everything important is happening inside a container,
    then it should be really simple to recreate a build at home in some
