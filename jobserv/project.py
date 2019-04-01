@@ -159,7 +159,7 @@ class ProjectDefinition(object):
         for k, v in run.get('params', {}).items():
             rundef['env'][k] = str(v)
         # finally set params based on what was passed by the trigger
-        for k, v in params.items():
+        for k, v in (params or {}).items():
             rundef['env'][k] = str(v)
         rundef['env']['H_PROJECT'] = dbrun.build.project.name
         rundef['env']['H_BUILD'] = str(dbrun.build.build_id)
