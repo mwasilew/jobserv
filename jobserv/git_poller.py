@@ -6,6 +6,7 @@ import json
 import logging
 import os
 import time
+import xml.etree.ElementTree as ET
 
 import requests
 import yaml
@@ -31,6 +32,7 @@ if JOBSERV_URL[-1] == '/':
     JOBSERV_URL = JOBSERV_URL[:-1]
 
 _projects = {}
+_cgit_repos = {}
 
 
 def _get_projects():
@@ -228,6 +230,44 @@ def _gitlab_log(proj, change_params):
     return gitlog
 
 
+def _cgit_log(proj, change_params):
+    gheader = proj['poller_def'].get('secrets', {}).get('git.http.extraheader')
+    base = change_params['GIT_OLD_SHA']
+    head = change_params['GIT_SHA']
+    url = change_params['GIT_URL']
+    if url[-4:] != '.git':
+        url += '.git'
+    url += '/atom'
+
+    try:
+        r = requests.get(url, params={'h': head})
+        if r.status_code == 401 and gheader:
+            log.info('Authorization required using git header in secrets')
+            key, val = gheader.split(':', 1)
+            headers = {key.strip(): val.strip()}
+            r = requests.get(url, headers=headers)
+    except Exception as e:
+        log.exception('Unable to get %s', url)
+        return 'Unable to get %s\n%s' % (url, str(e))
+
+    if r.status_code == 404:
+        return None
+
+    gitlog = ''
+    if r.status_code == 200:
+        root = ET.fromstring(r.text)
+        for entry in root.findall('{http://www.w3.org/2005/Atom}entry'):
+            sha = entry.find('{http://www.w3.org/2005/Atom}id').text
+            if sha == base:
+                break
+            msg = entry.find('{http://www.w3.org/2005/Atom}title').text
+            gitlog += '%s %s\n' % (sha[:7], msg)
+    else:
+        gitlog += 'Unable to get cgit atom feed for(%s): %d %s' % (
+            url, r.status_code, r.text)
+    return gitlog
+
+
 def _trigger(name, proj, projdef, trigger_name, change_params):
     log.info('Trigger build for %s with params: %r', name, change_params)
     data = {
@@ -244,6 +284,14 @@ def _trigger(name, proj, projdef, trigger_name, change_params):
         data['reason'] += '\n' + _github_log(proj, change_params)
     elif url in GITLAB_SERVERS:
         data['reason'] += '\n' + _gitlab_log(proj, change_params)
+    else:
+        capable = _cgit_repos.get(url, True)
+        if capable:
+            reason = _cgit_log(proj, change_params)
+            if reason:
+                data['reason'] += '\n' + reason
+            else:
+                _cgit_repos[url] = False
 
     log.debug('Data for build is: %r', data)
     url = '%s/projects/%s/builds/' % (JOBSERV_URL, name)
