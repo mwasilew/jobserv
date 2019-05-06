@@ -55,13 +55,13 @@ def _get_projdef(name, proj):
 
     headers = proj.setdefault('projdef_headers', {})
     token = proj['poller_def'].get('secrets', {}).get('githubtok')
-    if token:
-        headers['Authorization'] = 'token ' + token
 
     if gitlab:
         headers['PRIVATE-TOKEN'] = gitlab
         url = repo.replace('.git', '') + '/raw/master/' + defile
     elif 'github' in repo:
+        if token:
+            headers['Authorization'] = 'token ' + token
         url = repo.replace('github.com', 'raw.githubusercontent.com')
         if url[-1] != '/':
             url += '/'
