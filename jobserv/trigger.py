@@ -35,6 +35,12 @@ def _check_for_trigger_upgrade(rundef, trigger_type, parent_trigger_type):
             rundef['trigger_type'] = 'lava_pr'
             logging.info('Updating the rundef from lava->lava_pr')
             rundef = json.dumps(rundef, indent=2)
+    elif parent_trigger_type == 'git_poller':
+        if trigger_type == 'simple':
+            rundef = json.loads(rundef)
+            rundef['trigger_type'] = 'git_poller'
+            logging.info('Updating the rundef from simple->gith_poller')
+            rundef = json.dumps(rundef, indent=2)
     return rundef
 
 
@@ -111,6 +117,10 @@ def trigger_build(project, reason, trigger_name, params, secrets, proj_def,
         if not trigger:
             raise KeyError('Project(%s) does not have a trigger: %s' % (
                            project, trigger_name))
+        if trigger.get('triggers'):
+            # there's a trigger to run after all the runs for this trigger
+            # completed. it will need to know the parameters for this job
+            storage.create_build_params(b, params)
     except Exception as e:
         raise _fail_unexpected(b, e)
 
