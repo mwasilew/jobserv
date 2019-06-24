@@ -128,6 +128,7 @@ class ProjectTrigger(db.Model):
 
     def as_json(self):
         return {
+            'id': self.id,
             'user': self.user,
             'type': TriggerTypes(self.type).name,
             'project': self.project.name,
