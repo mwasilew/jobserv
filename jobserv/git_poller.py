@@ -13,7 +13,9 @@ import yaml
 
 from urllib.parse import quote_plus, urlparse
 
+from dataclasses import dataclass, field
 from requests.auth import HTTPBasicAuth
+from typing import Dict, Iterator, List, Optional, Tuple
 
 from jobserv.flask import permissions
 from jobserv.project import ProjectDefinition
@@ -31,29 +33,47 @@ JOBSERV_URL = os.environ.get('JOBSERV_URL', 'http://lci-web')
 if JOBSERV_URL[-1] == '/':
     JOBSERV_URL = JOBSERV_URL[:-1]
 
-_cgit_repos = {}
+_cgit_repos: Dict[str, bool] = {}
 
 
-def _get_projects():
+@dataclass
+class ProjectTrigger:
+    id: int
+    project: str
+    user: str
+    queue_priority: int
+    definition_repo: Optional[str] = None
+    definition_file: Optional[str] = None
+    secrets: Dict[str, str] = field(default_factory=dict)
+
+
+@dataclass
+class PollerEntry:
+    trigger: ProjectTrigger
+    definition: Optional[ProjectDefinition] = None
+    projdef_headers: Dict[str, str] = field(default_factory=dict)
+
+
+def _get_projects() -> Optional[Dict[str, ProjectTrigger]]:
     resp = permissions.internal_get(
         JOBSERV_URL + '/project-triggers/', params={'type': 'git_poller'})
     if resp.status_code != 200:
         log.error('Unable to get projects from front-end: %d %s',
                   resp.status_code, resp.text)
         return None
-    return {x['project']: x for x in resp.json()['data']}
+    return {x['project']: ProjectTrigger(**x) for x in resp.json()['data']}
 
 
-def _get_projdef(name, proj):
-    repo = proj['poller_def']['definition_repo']
-    defile = proj['poller_def'].get('definition_file')
+def _get_projdef(name: str, entry: PollerEntry) -> Optional[ProjectDefinition]:
+    repo = entry.trigger.definition_repo or ''
+    defile = entry.trigger.definition_file
     if not defile:
         defile = name + '.yml'
-    gitlab = proj['poller_def'].get('secrets', {}).get('gitlabtok')
-    gheader = proj['poller_def'].get('secrets', {}).get('git.http.extraheader')
+    gitlab = entry.trigger.secrets.get('gitlabtok')
+    gheader = entry.trigger.secrets.get('git.http.extraheader')
 
-    headers = proj.setdefault('projdef_headers', {})
-    token = proj['poller_def'].get('secrets', {}).get('githubtok')
+    headers = entry.projdef_headers
+    token = entry.trigger.secrets.get('githubtok')
 
     if gitlab:
         headers['PRIVATE-TOKEN'] = gitlab
@@ -84,7 +104,7 @@ def _get_projdef(name, proj):
             log.info('New version of project definition found for %s', url)
             data = yaml.safe_load(r.text)
             ProjectDefinition.validate_data(data)
-            proj['definition'] = ProjectDefinition(data)
+            entry.definition = ProjectDefinition(data)
             # allows us to cache the resp
             headers['If-None-Match'] = r.headers['ETAG']
         except Exception:
@@ -97,15 +117,16 @@ def _get_projdef(name, proj):
         log.error('Unable to read definition(%s): %d: %s',
                   url, r.status_code, r.text)
         return None
-    return proj['definition']
+    return entry.definition
 
 
-def _get_refs(repo_url, proj):
-    secrets = proj['poller_def'].get('secrets', {})
+def _get_refs(repo_url: str, trigger: ProjectTrigger) \
+              -> Iterator[Tuple[str, str]]:
+    secrets = trigger.secrets
     auth = None
     ghtok = secrets.get('githubtok')
     if ghtok:
-        auth = HTTPBasicAuth(proj['poller_def']['user'], ghtok)
+        auth = HTTPBasicAuth(trigger.user, ghtok)
 
     gltok = secrets.get('gitlabtok')
     git_header = secrets.get('git.http.extraheader')
@@ -123,7 +144,7 @@ def _get_refs(repo_url, proj):
         # we have to try unauthenticated first, because it could be a non-git
         # repo, that needs gitlab credentials for the script-repo stuff
         log.debug('Trying repo(%s) with gitlab credentials', repo_url)
-        user = proj['poller_def'].get('secrets', {}).get('gitlabuser')
+        user = secrets.get('gitlabuser')
         repo_url = repo_url.replace('://', '://%s:%s@' % (user, gltok))
         resp = requests.get(repo_url)
         # TODO flag this as a gitlab repo and then add in logic like
@@ -149,10 +170,11 @@ def _get_refs(repo_url, proj):
             yield sha, ref
 
 
-def _get_repo_changes(refs_cache, url, refs, proj):
+def _get_repo_changes(refs_cache, url: str, refs: List[str],
+                      trigger: ProjectTrigger) -> Iterator[dict]:
     log.info('Looking for changes to: %s', url)
     cur_refs = refs_cache.setdefault(url, {})
-    for sha, ref in _get_refs(url, proj):
+    for sha, ref in _get_refs(url, trigger):
         for pattern in refs:
             if fnmatch.fnmatch(ref, pattern):
                 cur = cur_refs.get(ref)
@@ -166,7 +188,7 @@ def _get_repo_changes(refs_cache, url, refs, proj):
                                'GIT_OLD_SHA': cur, 'GIT_SHA': sha}
 
 
-def _github_log(proj, change_params):
+def _github_log(trigger: ProjectTrigger, change_params: Dict[str, str]) -> str:
     base = change_params['GIT_OLD_SHA']
     head = change_params['GIT_SHA']
     url = change_params['GIT_URL'].replace(
@@ -176,9 +198,9 @@ def _github_log(proj, change_params):
     ) + '/commits?sha=' + head
 
     auth = None
-    ghtok = proj['poller_def'].get('secrets', {}).get('githubtok')
+    ghtok = trigger.secrets.get('githubtok')
     if ghtok:
-        auth = HTTPBasicAuth(proj['poller_def']['user'], ghtok)
+        auth = HTTPBasicAuth(trigger.user, ghtok)
 
     gitlog = ''
     try:
@@ -198,7 +220,7 @@ def _github_log(proj, change_params):
     return gitlog
 
 
-def _gitlab_log(proj, change_params):
+def _gitlab_log(trigger: ProjectTrigger, change_params: Dict[str, str]) -> str:
     base = change_params['GIT_OLD_SHA']
     head = change_params['GIT_SHA']
     p = urlparse(change_params['GIT_URL'])
@@ -207,7 +229,7 @@ def _gitlab_log(proj, change_params):
     url = (p.scheme + '://' + p.netloc + '/api/v4/projects/' + proj_enc +
            '/repository/commits')
     headers = None
-    tok = proj['poller_def'].get('secrets', {}).get('gitlabtok')
+    tok = trigger.secrets.get('gitlabtok')
     if tok:
         headers = {'PRIVATE-TOKEN': tok}
     try:
@@ -229,8 +251,8 @@ def _gitlab_log(proj, change_params):
     return gitlog
 
 
-def _cgit_log(proj, change_params):
-    gheader = proj['poller_def'].get('secrets', {}).get('git.http.extraheader')
+def _cgit_log(trigger: ProjectTrigger, change_params: Dict[str, str]) -> str:
+    gheader = trigger.secrets.get('git.http.extraheader')
     base = change_params['GIT_OLD_SHA']
     head = change_params['GIT_SHA']
     url = change_params['GIT_URL']
@@ -250,50 +272,55 @@ def _cgit_log(proj, change_params):
         return 'Unable to get %s\n%s' % (url, str(e))
 
     if r.status_code == 404:
-        return None
+        return ''
 
     gitlog = ''
     if r.status_code == 200:
         root = ET.fromstring(r.text)
         for entry in root.findall('{http://www.w3.org/2005/Atom}entry'):
-            sha = entry.find('{http://www.w3.org/2005/Atom}id').text
-            if sha == base:
+            sha = entry.find('{http://www.w3.org/2005/Atom}id')
+            if sha and sha.text == base:
                 break
-            msg = entry.find('{http://www.w3.org/2005/Atom}title').text
-            gitlog += '%s %s\n' % (sha[:7], msg)
+            msg = entry.find('{http://www.w3.org/2005/Atom}title')
+            if sha and msg:
+                # have to do str(sha.text) to make mypy happy
+                gitlog += '%s %s\n' % (str(sha.text)[:7], msg.text)
     else:
         gitlog += 'Unable to get cgit atom feed for(%s): %d %s' % (
             url, r.status_code, r.text)
     return gitlog
 
 
-def _trigger(name, proj, projdef, trigger_name, change_params):
-    log.info('Trigger build for %s with params: %r', name, change_params)
+def _trigger(entry: PollerEntry, trigger_name: str,
+             change_params: Dict[str, str]):
+    log.info('Trigger build for %s with params: %r',
+             entry.trigger.project, change_params)
+    assert entry.definition
     data = {
         'trigger-name': trigger_name,
         'params': change_params,
-        'secrets': proj['poller_def'].get('secrets', {}),
-        'project-definition': projdef._data,
+        'secrets': entry.trigger.secrets,
+        'project-definition': entry.definition._data,
         'reason': json.dumps(change_params, indent=2),
-        'queue-priority': proj['poller_def'].get('queue_priority', 0),
+        'queue-priority': entry.trigger.queue_priority,
     }
     p = urlparse(change_params['GIT_URL'])
     url = p.scheme + '://' + p.netloc
     if url == 'https://github.com':
-        data['reason'] += '\n' + _github_log(proj, change_params)
+        data['reason'] += '\n' + _github_log(entry.trigger, change_params)
     elif url in GITLAB_SERVERS:
-        data['reason'] += '\n' + _gitlab_log(proj, change_params)
+        data['reason'] += '\n' + _gitlab_log(entry.trigger, change_params)
     else:
         capable = _cgit_repos.get(url, True)
         if capable:
-            reason = _cgit_log(proj, change_params)
+            reason = _cgit_log(entry.trigger, change_params)
             if reason:
                 data['reason'] += '\n' + reason
             else:
                 _cgit_repos[url] = False
 
     log.debug('Data for build is: %r', data)
-    url = '%s/projects/%s/builds/' % (JOBSERV_URL, name)
+    url = '%s/projects/%s/builds/' % (JOBSERV_URL, entry.trigger.project)
     resp = permissions.internal_post(url, json=data)
     if resp.status_code != 201:
         log.error('Error creating build(%s): %d - %s',
@@ -302,8 +329,11 @@ def _trigger(name, proj, projdef, trigger_name, change_params):
         log.info('Build created: %s', resp.text)
 
 
-def _poll_project(refs_cache, name, proj, projdef):
-    for trigger in projdef.triggers:
+def _poll_project(refs_cache, name: str, entry: PollerEntry):
+    triggers: List[Dict] = []
+    if entry.definition:
+        triggers = entry.definition.triggers
+    for trigger in triggers:
         if trigger['type'] == 'git_poller':
             params = trigger.get('params', {})
             urls = params.get('GIT_URL', '').split()
@@ -312,12 +342,11 @@ def _poll_project(refs_cache, name, proj, projdef):
                 log.error('Project(%s) missing GIT_URL or GIT_POLL_REFS', name)
                 continue
             for url in urls:
-                for changes in _get_repo_changes(refs_cache, url, refs, proj):
-                    _trigger(
-                        name, proj, projdef, trigger['name'], changes)
+                for changes in _get_repo_changes(refs_cache, url, refs, entry.trigger):  # NOQA
+                    _trigger(entry, trigger['name'], changes)
 
 
-def _poll(project_triggers):
+def _poll(project_triggers: Dict[str, PollerEntry]):
     try:
         projects = _get_projects()
         if projects is None:
@@ -335,20 +364,20 @@ def _poll(project_triggers):
 
     for n in names - cur_names:
         log.info('Adding %s to poller list', n)
-        project_triggers[n] = {'poller_def': projects[n]}
+        project_triggers[n] = PollerEntry(trigger=projects[n])
 
     for n in names & cur_names:
-        if project_triggers[n]['poller_def'] != projects[n]:
+        if project_triggers[n].trigger != projects[n]:
             log.info('Updating %s', n)
-            project_triggers[n]['poller_def'] = projects[n]
+            project_triggers[n].trigger = projects[n]
 
     with Storage().git_poller_cache() as refs_cache:
-        for name, proj in project_triggers.items():
+        for name, entry in project_triggers.items():
             log.debug('Checking project: %s', name)
-            projdef = _get_projdef(name, proj)
+            projdef = _get_projdef(name, entry)
             proj_refs = refs_cache.setdefault(name, {})
             if projdef:
-                _poll_project(proj_refs, name, proj, projdef)
+                _poll_project(proj_refs, name, entry)
 
 
 def run():

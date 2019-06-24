@@ -19,13 +19,15 @@ class TestGitPoller(TestCase):
                 {
                     'id': 12,
                     'project': 'foo',
+                    'user': 'root',
+                    'queue_priority': 1,
                 },
             ]
         }
         perms.internal_get.return_value = resp
         project_triggers = git_poller._get_projects().values()
         self.assertEqual([(12, 'foo')],
-                         [(x['id'], x['project']) for x in project_triggers])
+                         [(x.id, x.project) for x in project_triggers])
 
     @mock.patch('jobserv.git_poller._get_projects')
     @mock.patch('jobserv.git_poller.Storage')
@@ -54,19 +56,17 @@ class TestGitPoller(TestCase):
     @mock.patch('jobserv.git_poller.Storage')
     def test_poll_updated(self, storage, get_projects, get_projdef):
         project_triggers = {
-            'foo': {
-                'poller_def': {'url': 'oldval'},
-            }
+            'foo': git_poller.PollerEntry(
+                git_poller.ProjectTrigger(12, 'proj', 'user', 1)),
         }
         get_projects.return_value = {
-            'foo': {'url': 'newval'}
+            'foo': git_poller.ProjectTrigger(12, 'proj', 'user', 0, 'r'),
         }
         get_projdef.return_value = None  # prevents trying to really poll
 
-        project_triggers = {}
         git_poller._poll(project_triggers)
-        self.assertEqual(
-            'newval', project_triggers['foo']['poller_def']['url'])
+        self.assertEqual(0, project_triggers['foo'].trigger.queue_priority)
+        self.assertEqual('r', project_triggers['foo'].trigger.definition_repo)
 
     @mock.patch('jobserv.git_poller.requests')
     def test_get_refs(self, requests):
@@ -76,9 +76,10 @@ ignore
 004015f12d4181355604efa7b429fc3bcbae08d27f40 refs/heads/master
 004015f12d4181355604efa7b429fc3bcbae08d27f41 refs/pulls/123
 '''
-        proj = {'poller_def': {}}
+        trigger = git_poller.ProjectTrigger(
+            id=1, project='p', user='u', queue_priority=1)
         vals = []
-        for sha, ref in git_poller._get_refs('doesnot matter', proj):
+        for sha, ref in git_poller._get_refs('doesnot matter', trigger):
             vals.append((sha, ref))
         expected = [
             ('15f12d4181355604efa7b429fc3bcbae08d27f40', 'refs/heads/master'),
@@ -90,40 +91,46 @@ ignore
     def test_get_refs_fatal(self, requests):
         requests.get().status_code = 500
         requests.get().text = 'foobar'
-        proj = {'poller_def': {}}
+        trigger = git_poller.ProjectTrigger(
+            id=1, project='p', user='u', queue_priority=1)
         vals = []
-        for sha, ref in git_poller._get_refs('doesnot matter', proj):
+        for sha, ref in git_poller._get_refs('doesnot matter', trigger):
             vals.append((sha, ref))
         self.assertEqual([], vals)
 
     @mock.patch('jobserv.git_poller._get_refs')
     def test_repo_changes_first_run(self, get_refs):
-        proj = {'poller_def': {}}
+        trigger = git_poller.ProjectTrigger(
+            id=1, project='p', user='u', queue_priority=1)
         refs = ['ref1']
         get_refs.return_value = [
             ('sha1', 'ref1'),
             ('sha2', 'ref2'),
         ]
         cache = {}
-        change_params = git_poller._get_repo_changes(cache, 'url1', refs, proj)
+        change_params = git_poller._get_repo_changes(
+            cache, 'url1', refs, trigger)
         self.assertEqual([], list(change_params))
         self.assertEqual({'url1': {'ref1': 'sha1'}}, cache)
 
         refs = ['refs1', 'ref2']
-        change_params = git_poller._get_repo_changes(cache, 'url1', refs, proj)
+        change_params = git_poller._get_repo_changes(
+            cache, 'url1', refs, trigger)
         self.assertEqual([], list(change_params))
         self.assertEqual({'url1': {'ref1': 'sha1', 'ref2': 'sha2'}}, cache)
 
     @mock.patch('jobserv.git_poller._get_refs')
     def test_repo_changes_changed(self, get_refs):
-        proj = {'poller_def': {}}
+        trigger = git_poller.ProjectTrigger(
+            id=1, project='p', user='u', queue_priority=1)
         refs = ['ref1', 'ref2']
         get_refs.return_value = [
             ('sha1', 'ref1'),
             ('sha2', 'ref2'),
         ]
         cache = {'url1': {'ref1': 'oldsha', 'ref2': 'sha2'}}
-        change_params = git_poller._get_repo_changes(cache, 'url1', refs, proj)
+        change_params = git_poller._get_repo_changes(
+            cache, 'url1', refs, trigger)
         expected = [{
             'GIT_URL': 'url1',
             'GIT_OLD_SHA': 'oldsha',
