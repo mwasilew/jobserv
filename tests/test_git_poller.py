@@ -9,35 +9,34 @@ from unittest import TestCase, mock
 class TestGitPoller(TestCase):
     def setUp(self):
         super().setUp()
-        self.addCleanup(setattr, git_poller, '_projects', {})
 
     @mock.patch('jobserv.git_poller._get_projects')
     @mock.patch('jobserv.git_poller.Storage')
     def test_poll_remove(self, storage, get_projects):
-        git_poller._projects = {'foo': 'doesnt matter for this test'}
         get_projects.return_value = {}
 
-        git_poller._poll()
-        self.assertEqual({}, git_poller._projects)
+        project_triggers = {}
+        git_poller._poll(project_triggers)
+        self.assertEqual({}, project_triggers)
 
     @mock.patch('jobserv.git_poller._get_projdef')
     @mock.patch('jobserv.git_poller._get_projects')
     @mock.patch('jobserv.git_poller.Storage')
     def test_poll_add(self, storage, get_projects, get_projdef):
-        git_poller._projects = {}
         get_projects.return_value = {
             'foo': {'url': 'does not matter for this test'},
         }
         get_projdef.return_value = None  # prevents trying to really poll
 
-        git_poller._poll()
-        self.assertEqual(['foo'], list(git_poller._projects.keys()))
+        project_triggers = {}
+        git_poller._poll(project_triggers)
+        self.assertEqual(['foo'], list(project_triggers.keys()))
 
     @mock.patch('jobserv.git_poller._get_projdef')
     @mock.patch('jobserv.git_poller._get_projects')
     @mock.patch('jobserv.git_poller.Storage')
     def test_poll_updated(self, storage, get_projects, get_projdef):
-        git_poller._projects = {
+        project_triggers = {
             'foo': {
                 'poller_def': {'url': 'oldval'},
             }
@@ -47,9 +46,10 @@ class TestGitPoller(TestCase):
         }
         get_projdef.return_value = None  # prevents trying to really poll
 
-        git_poller._poll()
+        project_triggers = {}
+        git_poller._poll(project_triggers)
         self.assertEqual(
-            'newval', git_poller._projects['foo']['poller_def']['url'])
+            'newval', project_triggers['foo']['poller_def']['url'])
 
     @mock.patch('jobserv.git_poller.requests')
     def test_get_refs(self, requests):

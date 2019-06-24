@@ -31,7 +31,6 @@ JOBSERV_URL = os.environ.get('JOBSERV_URL', 'http://lci-web')
 if JOBSERV_URL[-1] == '/':
     JOBSERV_URL = JOBSERV_URL[:-1]
 
-_projects = {}
 _cgit_repos = {}
 
 
@@ -318,7 +317,7 @@ def _poll_project(refs_cache, name, proj, projdef):
                         name, proj, projdef, trigger['name'], changes)
 
 
-def _poll():
+def _poll(project_triggers):
     try:
         projects = _get_projects()
         if projects is None:
@@ -328,23 +327,23 @@ def _poll():
         return
 
     names = set(projects.keys())
-    cur_names = set(_projects.keys())
+    cur_names = set(project_triggers.keys())
 
     for n in cur_names - names:
         log.info('Removing %s from poller list', n)
-        del _projects[n]
+        del project_triggers[n]
 
     for n in names - cur_names:
         log.info('Adding %s to poller list', n)
-        _projects[n] = {'poller_def': projects[n]}
+        project_triggers[n] = {'poller_def': projects[n]}
 
     for n in names & cur_names:
-        if _projects[n]['poller_def'] != projects[n]:
+        if project_triggers[n]['poller_def'] != projects[n]:
             log.info('Updating %s', n)
-            _projects[n]['poller_def'] = projects[n]
+            project_triggers[n]['poller_def'] = projects[n]
 
     with Storage().git_poller_cache() as refs_cache:
-        for name, proj in _projects.items():
+        for name, proj in project_triggers.items():
             log.debug('Checking project: %s', name)
             projdef = _get_projdef(name, proj)
             proj_refs = refs_cache.setdefault(name, {})
@@ -354,6 +353,7 @@ def _poll():
 
 def run():
     last_run = time.time() - 15  # Wait a few seconds before polling jobserv
+    project_triggers = {}
     while True:
         sleep = GIT_POLLER_INTERVAL - (time.time() - last_run)
         if sleep > 0:
@@ -361,6 +361,6 @@ def run():
             time.sleep(sleep)
         last_run = time.time()
         try:
-            _poll()
+            _poll(project_triggers)
         except Exception:
             log.exception('Error getting cache, retrying in a bit')
