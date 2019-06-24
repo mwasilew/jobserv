@@ -10,6 +10,23 @@ class TestGitPoller(TestCase):
     def setUp(self):
         super().setUp()
 
+    @mock.patch('jobserv.git_poller.permissions')
+    def test_get_projects(self, perms):
+        resp = mock.Mock()
+        resp.status_code = 200
+        resp.json.return_value = {
+            'data': [
+                {
+                    'id': 12,
+                    'project': 'foo',
+                },
+            ]
+        }
+        perms.internal_get.return_value = resp
+        project_triggers = git_poller._get_projects().values()
+        self.assertEqual([(12, 'foo')],
+                         [(x['id'], x['project']) for x in project_triggers])
+
     @mock.patch('jobserv.git_poller._get_projects')
     @mock.patch('jobserv.git_poller.Storage')
     def test_poll_remove(self, storage, get_projects):
