@@ -54,14 +54,14 @@ class PollerEntry:
     projdef_headers: Dict[str, str] = field(default_factory=dict)
 
 
-def _get_project_triggers() -> Optional[Dict[str, ProjectTrigger]]:
+def _get_project_triggers() -> Optional[Dict[int, ProjectTrigger]]:
     resp = permissions.internal_get(
         JOBSERV_URL + '/project-triggers/', params={'type': 'git_poller'})
     if resp.status_code != 200:
         log.error('Unable to get projects from front-end: %d %s',
                   resp.status_code, resp.text)
         return None
-    return {x['project']: ProjectTrigger(**x) for x in resp.json()['data']}
+    return {x['id']: ProjectTrigger(**x) for x in resp.json()['data']}
 
 
 def _get_projdef(entry: PollerEntry) -> Optional[ProjectDefinition]:
@@ -347,7 +347,7 @@ def _poll_project(refs_cache, entry: PollerEntry):
                     _trigger(entry, trigger['name'], changes)
 
 
-def _poll(entries: Dict[str, PollerEntry]):
+def _poll(entries: Dict[int, PollerEntry]):
     try:
         triggers = _get_project_triggers()
         if triggers is None:
@@ -376,7 +376,7 @@ def _poll(entries: Dict[str, PollerEntry]):
         for entry in entries.values():
             log.debug('Checking project: %s', entry.trigger.project)
             projdef = _get_projdef(entry)
-            proj_refs = refs_cache.setdefault(entry.trigger.project, {})
+            proj_refs = refs_cache.setdefault(entry.trigger.id, {})
             if projdef:
                 _poll_project(proj_refs, entry)
 
