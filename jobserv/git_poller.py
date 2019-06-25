@@ -54,7 +54,7 @@ class PollerEntry:
     projdef_headers: Dict[str, str] = field(default_factory=dict)
 
 
-def _get_projects() -> Optional[Dict[str, ProjectTrigger]]:
+def _get_project_triggers() -> Optional[Dict[str, ProjectTrigger]]:
     resp = permissions.internal_get(
         JOBSERV_URL + '/project-triggers/', params={'type': 'git_poller'})
     if resp.status_code != 200:
@@ -346,33 +346,33 @@ def _poll_project(refs_cache, name: str, entry: PollerEntry):
                     _trigger(entry, trigger['name'], changes)
 
 
-def _poll(project_triggers: Dict[str, PollerEntry]):
+def _poll(entries: Dict[str, PollerEntry]):
     try:
-        projects = _get_projects()
-        if projects is None:
+        triggers = _get_project_triggers()
+        if triggers is None:
             return
     except Exception:
         logging.exception('Unable to get project list from JobServ')
         return
 
-    names = set(projects.keys())
-    cur_names = set(project_triggers.keys())
+    names = set(triggers.keys())
+    cur_names = set(entries.keys())
 
     for n in cur_names - names:
         log.info('Removing %s from poller list', n)
-        del project_triggers[n]
+        del entries[n]
 
     for n in names - cur_names:
         log.info('Adding %s to poller list', n)
-        project_triggers[n] = PollerEntry(trigger=projects[n])
+        entries[n] = PollerEntry(trigger=triggers[n])
 
     for n in names & cur_names:
-        if project_triggers[n].trigger != projects[n]:
+        if entries[n].trigger != triggers[n]:
             log.info('Updating %s', n)
-            project_triggers[n].trigger = projects[n]
+            entries[n].trigger = triggers[n]
 
     with Storage().git_poller_cache() as refs_cache:
-        for name, entry in project_triggers.items():
+        for name, entry in entries.items():
             log.debug('Checking project: %s', name)
             projdef = _get_projdef(name, entry)
             proj_refs = refs_cache.setdefault(name, {})
@@ -382,7 +382,7 @@ def _poll(project_triggers: Dict[str, PollerEntry]):
 
 def run():
     last_run = time.time() - 15  # Wait a few seconds before polling jobserv
-    project_triggers = {}
+    entries = {}
     while True:
         sleep = GIT_POLLER_INTERVAL - (time.time() - last_run)
         if sleep > 0:
@@ -390,6 +390,6 @@ def run():
             time.sleep(sleep)
         last_run = time.time()
         try:
-            _poll(project_triggers)
+            _poll(entries)
         except Exception:
             log.exception('Error getting cache, retrying in a bit')

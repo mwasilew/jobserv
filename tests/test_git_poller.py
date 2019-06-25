@@ -11,7 +11,7 @@ class TestGitPoller(TestCase):
         super().setUp()
 
     @mock.patch('jobserv.git_poller.permissions')
-    def test_get_projects(self, perms):
+    def test_get_project_triggers(self, perms):
         resp = mock.Mock()
         resp.status_code = 200
         resp.json.return_value = {
@@ -25,24 +25,24 @@ class TestGitPoller(TestCase):
             ]
         }
         perms.internal_get.return_value = resp
-        project_triggers = git_poller._get_projects().values()
+        project_triggers = git_poller._get_project_triggers().values()
         self.assertEqual([(12, 'foo')],
                          [(x.id, x.project) for x in project_triggers])
 
-    @mock.patch('jobserv.git_poller._get_projects')
+    @mock.patch('jobserv.git_poller._get_project_triggers')
     @mock.patch('jobserv.git_poller.Storage')
-    def test_poll_remove(self, storage, get_projects):
-        get_projects.return_value = {}
+    def test_poll_remove(self, storage, get_project_triggers):
+        get_project_triggers.return_value = {}
 
         project_triggers = {}
         git_poller._poll(project_triggers)
         self.assertEqual({}, project_triggers)
 
     @mock.patch('jobserv.git_poller._get_projdef')
-    @mock.patch('jobserv.git_poller._get_projects')
+    @mock.patch('jobserv.git_poller._get_project_triggers')
     @mock.patch('jobserv.git_poller.Storage')
-    def test_poll_add(self, storage, get_projects, get_projdef):
-        get_projects.return_value = {
+    def test_poll_add(self, storage, get_project_triggers, get_projdef):
+        get_project_triggers.return_value = {
             'foo': {'url': 'does not matter for this test'},
         }
         get_projdef.return_value = None  # prevents trying to really poll
@@ -52,14 +52,14 @@ class TestGitPoller(TestCase):
         self.assertEqual(['foo'], list(project_triggers.keys()))
 
     @mock.patch('jobserv.git_poller._get_projdef')
-    @mock.patch('jobserv.git_poller._get_projects')
+    @mock.patch('jobserv.git_poller._get_project_triggers')
     @mock.patch('jobserv.git_poller.Storage')
-    def test_poll_updated(self, storage, get_projects, get_projdef):
+    def test_poll_updated(self, storage, get_project_triggers, get_projdef):
         project_triggers = {
             'foo': git_poller.PollerEntry(
                 git_poller.ProjectTrigger(12, 'proj', 'user', 1)),
         }
-        get_projects.return_value = {
+        get_project_triggers.return_value = {
             'foo': git_poller.ProjectTrigger(12, 'proj', 'user', 0, 'r'),
         }
         get_projdef.return_value = None  # prevents trying to really poll
