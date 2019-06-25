@@ -232,7 +232,7 @@ class RunAPITest(JobServTest):
         self.assertEqual('QUEUED', run.status.name)
 
         rundef = json.loads(m.set_run_definition.call_args_list[0][0][1])
-        self.assertEqual('simple', rundef['trigger_type'])
+        self.assertEqual('git_poller', rundef['trigger_type'])
 
     @patch('jobserv.api.run.Storage')
     def test_run_complete_triggers_type_upgrade(self, storage):
