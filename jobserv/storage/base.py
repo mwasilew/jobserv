@@ -57,6 +57,14 @@ class BaseStorage(object):
         name = '%s/%s/project.yml' % (build.project.name, build.build_id)
         return self._get_as_string(name)
 
+    def create_build_params(self, build, params):
+        name = '%s/%s/params.json' % (build.project.name, build.build_id)
+        self._create_from_string(name, json.dumps(params))
+
+    def get_build_params(self, build):
+        name = '%s/%s/params.json' % (build.project.name, build.build_id)
+        return json.loads(self._get_as_string(name))
+
     def get_artifact_content(self, run, path, decoded=True):
         if not decoded:
             return self._get_raw(self._get_run_path(run, path))

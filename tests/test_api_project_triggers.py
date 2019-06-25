@@ -23,6 +23,7 @@ class ProjectTriggerAPITest(JobServTest):
         db.session.commit()
         triggers = self.get_signed_json('/project-triggers/')
         self.assertEqual(2, len(triggers))
+        self.assertIn('id', triggers[0])
         self.assertEqual('p', triggers[0]['project'])
         self.assertEqual('user', triggers[0]['user'])
         self.assertEqual('repo', triggers[0]['definition_repo'])

@@ -78,6 +78,8 @@ def _handle_build_complete(projdef, storage, build, params, secrets, trigger):
         }
         triggers = trigger.get('triggers', [])
         if triggers:
+            build_params = storage.get_build_params(build)
+            params.update(build_params)
             _create_triggers(projdef, storage, build, params, secrets,
                              trigger.get('triggers', []), trigger['type'])
             db.session.flush()

@@ -232,7 +232,7 @@ class RunAPITest(JobServTest):
         self.assertEqual('QUEUED', run.status.name)
 
         rundef = json.loads(m.set_run_definition.call_args_list[0][0][1])
-        self.assertEqual('simple', rundef['trigger_type'])
+        self.assertEqual('git_poller', rundef['trigger_type'])
 
     @patch('jobserv.api.run.Storage')
     def test_run_complete_triggers_type_upgrade(self, storage):
@@ -612,6 +612,7 @@ class RunAPITest(JobServTest):
         })
         m.console_logfd.return_value = open('/dev/null', 'w')
         m.get_run_definition.return_value = json.dumps({})
+        m.get_build_params.return_value = {'buildparam': '42'}
         storage.return_value = m
         r = Run(self.build, 'run0')
         r.trigger = 'github'
@@ -629,3 +630,5 @@ class RunAPITest(JobServTest):
         run = Run.query.all()[1]
         self.assertEqual('test', run.name)
         self.assertEqual('QUEUED', run.status.name)
+        rundef = json.loads(m.set_run_definition.call_args[0][1])
+        self.assertEqual('42', rundef['env']['buildparam'])
