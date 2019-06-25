@@ -43,7 +43,7 @@ class TestGitPoller(TestCase):
     @mock.patch('jobserv.git_poller.Storage')
     def test_poll_add(self, storage, get_project_triggers, get_projdef):
         get_project_triggers.return_value = {
-            'foo': {'url': 'does not matter for this test'},
+            'foo': git_poller.ProjectTrigger(12, 'proj', 'user', 1),
         }
         get_projdef.return_value = None  # prevents trying to really poll
 

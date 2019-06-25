@@ -64,11 +64,11 @@ def _get_project_triggers() -> Optional[Dict[str, ProjectTrigger]]:
     return {x['project']: ProjectTrigger(**x) for x in resp.json()['data']}
 
 
-def _get_projdef(name: str, entry: PollerEntry) -> Optional[ProjectDefinition]:
+def _get_projdef(entry: PollerEntry) -> Optional[ProjectDefinition]:
     repo = entry.trigger.definition_repo or ''
     defile = entry.trigger.definition_file
     if not defile:
-        defile = name + '.yml'
+        defile = entry.trigger.project + '.yml'
     gitlab = entry.trigger.secrets.get('gitlabtok')
     gheader = entry.trigger.secrets.get('git.http.extraheader')
 
@@ -329,7 +329,7 @@ def _trigger(entry: PollerEntry, trigger_name: str,
         log.info('Build created: %s', resp.text)
 
 
-def _poll_project(refs_cache, name: str, entry: PollerEntry):
+def _poll_project(refs_cache, entry: PollerEntry):
     triggers: List[Dict] = []
     if entry.definition:
         triggers = entry.definition.triggers
@@ -339,7 +339,8 @@ def _poll_project(refs_cache, name: str, entry: PollerEntry):
             urls = params.get('GIT_URL', '').split()
             refs = params.get('GIT_POLL_REFS', '').split()
             if not urls or not refs:
-                log.error('Project(%s) missing GIT_URL or GIT_POLL_REFS', name)
+                log.error('Project(%s) missing GIT_URL or GIT_POLL_REFS',
+                          entry.trigger.project)
                 continue
             for url in urls:
                 for changes in _get_repo_changes(refs_cache, url, refs, entry.trigger):  # NOQA
@@ -372,12 +373,12 @@ def _poll(entries: Dict[str, PollerEntry]):
             entries[n].trigger = triggers[n]
 
     with Storage().git_poller_cache() as refs_cache:
-        for name, entry in entries.items():
-            log.debug('Checking project: %s', name)
-            projdef = _get_projdef(name, entry)
-            proj_refs = refs_cache.setdefault(name, {})
+        for entry in entries.values():
+            log.debug('Checking project: %s', entry.trigger.project)
+            projdef = _get_projdef(entry)
+            proj_refs = refs_cache.setdefault(entry.trigger.project, {})
             if projdef:
-                _poll_project(proj_refs, name, entry)
+                _poll_project(proj_refs, entry)
 
 
 def run():
