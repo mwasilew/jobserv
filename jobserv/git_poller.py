@@ -39,6 +39,7 @@ _cgit_repos: Dict[str, bool] = {}
 @dataclass
 class ProjectTrigger:
     id: int
+    type: str
     project: str
     user: str
     queue_priority: int

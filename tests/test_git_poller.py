@@ -18,6 +18,7 @@ class TestGitPoller(TestCase):
             'data': [
                 {
                     'id': 12,
+                    'type': 'git_poller',
                     'project': 'foo',
                     'user': 'root',
                     'queue_priority': 1,
@@ -43,7 +44,7 @@ class TestGitPoller(TestCase):
     @mock.patch('jobserv.git_poller.Storage')
     def test_poll_add(self, storage, get_project_triggers, get_projdef):
         get_project_triggers.return_value = {
-            'foo': git_poller.ProjectTrigger(12, 'proj', 'user', 1),
+            'foo': git_poller.ProjectTrigger(12, 't', 'proj', 'user', 1),
         }
         get_projdef.return_value = None  # prevents trying to really poll
 
@@ -57,10 +58,10 @@ class TestGitPoller(TestCase):
     def test_poll_updated(self, storage, get_project_triggers, get_projdef):
         project_triggers = {
             'foo': git_poller.PollerEntry(
-                git_poller.ProjectTrigger(12, 'proj', 'user', 1)),
+                git_poller.ProjectTrigger(12, 't', 'proj', 'user', 1)),
         }
         get_project_triggers.return_value = {
-            'foo': git_poller.ProjectTrigger(12, 'proj', 'user', 0, 'r'),
+            'foo': git_poller.ProjectTrigger(12, 't', 'proj', 'user', 0, 'r'),
         }
         get_projdef.return_value = None  # prevents trying to really poll
 
@@ -77,7 +78,7 @@ ignore
 004015f12d4181355604efa7b429fc3bcbae08d27f41 refs/pulls/123
 '''
         trigger = git_poller.ProjectTrigger(
-            id=1, project='p', user='u', queue_priority=1)
+            id=1, type='t', project='p', user='u', queue_priority=1)
         vals = []
         for sha, ref in git_poller._get_refs('doesnot matter', trigger):
             vals.append((sha, ref))
@@ -92,7 +93,7 @@ ignore
         requests.get().status_code = 500
         requests.get().text = 'foobar'
         trigger = git_poller.ProjectTrigger(
-            id=1, project='p', user='u', queue_priority=1)
+            id=1, type='t', project='p', user='u', queue_priority=1)
         vals = []
         for sha, ref in git_poller._get_refs('doesnot matter', trigger):
             vals.append((sha, ref))
@@ -101,7 +102,7 @@ ignore
     @mock.patch('jobserv.git_poller._get_refs')
     def test_repo_changes_first_run(self, get_refs):
         trigger = git_poller.ProjectTrigger(
-            id=1, project='p', user='u', queue_priority=1)
+            id=1, type='t', project='p', user='u', queue_priority=1)
         refs = ['ref1']
         get_refs.return_value = [
             ('sha1', 'ref1'),
@@ -122,7 +123,7 @@ ignore
     @mock.patch('jobserv.git_poller._get_refs')
     def test_repo_changes_changed(self, get_refs):
         trigger = git_poller.ProjectTrigger(
-            id=1, project='p', user='u', queue_priority=1)
+            id=1, type='t', project='p', user='u', queue_priority=1)
         refs = ['ref1', 'ref2']
         get_refs.return_value = [
             ('sha1', 'ref1'),
