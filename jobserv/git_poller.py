@@ -375,9 +375,10 @@ def _poll(entries: Dict[int, PollerEntry]):
 
     with Storage().git_poller_cache() as refs_cache:
         for entry in entries.values():
-            log.debug('Checking project: %s', entry.trigger.project)
+            log.debug('Checking project: %s %d',
+                      entry.trigger.project, entry.trigger.id)
             projdef = _get_projdef(entry)
-            proj_refs = refs_cache.setdefault(entry.trigger.id, {})
+            proj_refs = refs_cache.setdefault(str(entry.trigger.id), {})
             if projdef:
                 _poll_project(proj_refs, entry)
 
