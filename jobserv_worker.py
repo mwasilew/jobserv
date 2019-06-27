@@ -4,6 +4,7 @@
 # Author: Andy Doan <andy.doan@linaro.org>
 
 import argparse
+import contextlib
 import datetime
 import fcntl
 import hashlib
@@ -66,6 +67,37 @@ def _create_conf(server_url, hostname, concurrent_runs, host_tags, surges):
         config.write(f, True)
 
 
+class RunLocks(object):
+    def __init__(self, count):
+        self._flocks = []
+        locksdir = os.path.dirname(script)
+        for x in range(count):
+            x = open(os.path.join(locksdir, '.run-lock-%d' % x), 'a')
+            try:
+                fcntl.flock(x, fcntl.LOCK_EX | fcntl.LOCK_NB)
+                os.set_inheritable(x.fileno(), True)
+                self._flocks.append(x)
+            except BlockingIOError:
+                pass
+
+    def aquire(self, reason):
+        fd = self._flocks.pop()
+        fd.seek(0)
+        fd.truncate()
+        fd.write(reason)
+        return fd
+
+    def release(self):
+        for fd in self._flocks:
+            fd.seek(0)
+            fd.truncate()
+            fd.write('free')
+            fd.close()
+
+    def __len__(self):
+        return len(self._flocks)
+
+
 class HostProps(object):
     CACHE = os.path.join(os.path.dirname(script), 'hostprops.cache')
 
@@ -120,21 +152,15 @@ class HostProps(object):
         raise RuntimeError('Unable to find "MemFree" in /proc/meminfo')
 
     @staticmethod
-    def get_available_runners():
-        '''Return the number of available runners we have.
-           An array of flocked file descriptors will be returned. The run will
-           stay locked until the fds are closed
-        '''
-        locksdir = os.path.dirname(script)
-        avail = []
-        for x in range(int(config['jobserv']['concurrent_runs'])):
-            x = open(os.path.join(locksdir, '.run-lock-%d' % x), 'a')
-            try:
-                fcntl.flock(x, fcntl.LOCK_EX | fcntl.LOCK_NB)
-                avail.append(x)
-            except BlockingIOError:
-                pass
-        return avail
+    @contextlib.contextmanager
+    def available_runners():
+        locks = None
+        try:
+            locks = RunLocks(2)
+            yield locks
+        finally:
+            if locks:
+                locks.release()
 
 
 class JobServ(object):
@@ -188,22 +214,23 @@ class JobServ(object):
     def delete_host(self):
         self._delete('/workers/%s/' % config['jobserv']['hostname'])
 
+    @contextlib.contextmanager
     def check_in(self):
-        flocks = HostProps.get_available_runners()
         load_avg_1, load_avg_5, load_avg_15 = os.getloadavg()
-        params = {
-            'available_runners': len(flocks),
-            'mem_free': HostProps.get_available_memory(),
-            # /var/lib is what should hold docker images and will be the most
-            # important measure of free disk space for us over time
-            'disk_free': HostProps.get_available_space('/var/lib'),
-            'load_avg_1': load_avg_1,
-            'load_avg_5': load_avg_5,
-            'load_avg_15': load_avg_15,
-        }
-        data = self._get(
-            '/workers/%s/' % config['jobserv']['hostname'], params).json()
-        return data, flocks
+        with HostProps.available_runners() as locks:
+            params = {
+                'available_runners': len(locks),
+                'mem_free': HostProps.get_available_memory(),
+                # /var/lib is what should hold docker images and will be the
+                # most important measure of free disk space for us over time
+                'disk_free': HostProps.get_available_space('/var/lib'),
+                'load_avg_1': load_avg_1,
+                'load_avg_5': load_avg_5,
+                'load_avg_15': load_avg_15,
+            }
+            data = self._get(
+                '/workers/%s/' % config['jobserv']['hostname'], params).json()
+            yield data, locks
 
     def get_worker_script(self):
         return self._get('/worker').text
@@ -396,11 +423,13 @@ def _handle_rebooted_run(jobserv):
         rundir += str(time.time())
         os.rename(reboot_run, rundir)
 
-        flocks = HostProps.get_available_runners()
         with open(os.path.join(rundir, 'rundef.json')) as f:
             rundef = json.load(f)
+
+        with HostProps.available_runners() as locks:
+            rundef['flock'] = locks.aquire(rundef['run_url'])
+
         log.info('Rebooted run is: %s', rundef['run_url'])
-        rundef['flock'] = flocks.pop()
         jobserv.update_run(rundef, 'RUNNING', 'Resuming rebooted run')
         _handle_run(jobserv, rundef, rundir)
         return True
@@ -412,15 +441,18 @@ def cmd_check(args):
         return
 
     HostProps().update_if_needed(args.server)
-    data, flocks = args.server.check_in()
-    for rundef in data['data']['worker'].get('run-defs', []):
-        rundef = json.loads(rundef)
-        # by placing the flock in the rundef, it will stay locked after
-        # the runner forks since the open file will be referenced
-        rundef['flock'] = flocks.pop()
-        rundef['env']['H_WORKER'] = config['jobserv']['hostname']
+    rundefs = []
+    with args.server.check_in() as (data, locks):
+        for rd in (data['data']['worker'].get('run-defs') or []):
+            rundef = json.loads(rd)
+            rundef['env']['H_WORKER'] = config['jobserv']['hostname']
+            rundef['flock'] = locks.aquire(rundef.get('run_url'))
+            rundefs.append(rundef)
+
+    for rundef in rundefs:
         log.info('Executing run: %s', rundef.get('run_url'))
         _handle_run(args.server, rundef)
+
     ver = data['data']['worker']['version']
     if ver != config['jobserv']['version']:
         log.warning('Upgrading client to: %s', ver)
