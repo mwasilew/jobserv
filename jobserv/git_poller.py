@@ -283,7 +283,7 @@ def _cgit_log(trigger: ProjectTrigger, change_params: Dict[str, str]) -> str:
             if sha and sha.text == base:
                 break
             msg = entry.find('{http://www.w3.org/2005/Atom}title')
-            if sha and msg:
+            if sha is not None and msg is not None:
                 # have to do str(sha.text) to make mypy happy
                 gitlog += '%s %s\n' % (str(sha.text)[:7], msg.text)
     else:
