@@ -6,7 +6,8 @@ import re
 
 import yaml
 
-from flask import Blueprint, current_app, request, send_file, url_for
+from flask import (
+    Blueprint, current_app, make_response, request, send_file, url_for)
 
 from jobserv.flask import permissions
 from jobserv.storage import Storage
@@ -284,7 +285,9 @@ def run_get_artifact(proj, build_id, run, path):
             # render in the browser
             content = storage.get_artifact_content(r, path)
             return content, 200, {'Content-Type': 'text/html'}
-        return storage.get_download_response(request, r, path)
+        resp = storage.get_download_response(request, r, path)
+        resp.headers['X-RUN-STATUS'] = r.status.name
+        return resp
 
     if path != 'console.log':
         raise ApiError(
@@ -292,10 +295,17 @@ def run_get_artifact(proj, build_id, run, path):
 
     if r.status == BuildStatus.QUEUED:
         msg = '# Waiting for worker with tag: ' + r.host_tag
-        return msg, 200, {'Content-Type': 'text/plain'}
+        return (msg, 200,
+                {'Content-Type': 'text/plain', 'X-RUN-STATUS': r.status.name})
     try:
-        return send_file(
-            Storage().console_logfd(r, 'rb'), mimetype='text/plain')
+        fd = Storage().console_logfd(r, 'rb')
+        offset = request.args.get('X-OFFSET')
+        if offset:
+            fd.seek(0, offset)
+        resp = make_response(send_file(fd, mimetype='text/plain'))
+        resp.headers['X-RUN-STATUS'] = r.status.name
+        return resp
+
     except FileNotFoundError:
         # This is a race condition. The run completed while we were checking
         return Storage().get_download_response(request, r, path)
