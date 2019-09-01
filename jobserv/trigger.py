@@ -62,7 +62,7 @@ def trigger_runs(storage, projdef, build, trigger, params, secrets,
             db.session.add(r)
             db.session.flush()
             rundef = projdef.get_run_definition(
-                r, run, trigger['type'], params, secrets)
+                r, run, trigger, params, secrets)
             rundef = _check_for_trigger_upgrade(
                 rundef, trigger['type'], parent_type)
             storage.set_run_definition(r, rundef)

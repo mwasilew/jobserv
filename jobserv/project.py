@@ -90,7 +90,7 @@ class ProjectDefinition(object):
             if trigger['name'] == name:
                 return trigger
 
-    def get_run_definition(self, dbrun, run, trigger_type, params, secrets):
+    def get_run_definition(self, dbrun, run, trigger, params, secrets):
         url = url_for('api_run.run_update', proj=dbrun.build.project.name,
                       build_id=dbrun.build.build_id, run=dbrun.name,
                       _external=True)
@@ -107,7 +107,7 @@ class ProjectDefinition(object):
             'frontend_url': public,
             'runner_url': url_for(
                 'api_worker.runner_download', _external=True),
-            'trigger_type': trigger_type,
+            'trigger_type': trigger['type'],
             'container': run['container'],
             'container-auth': run.get('container-auth'),
             'privileged': run.get('privileged', False),
@@ -154,6 +154,9 @@ class ProjectDefinition(object):
 
         # first set project-level params
         for k, v in self.params.items():
+            rundef['env'][k] = str(v)
+        # second set trigger-level params
+        for k, v in trigger.get('params', {}).items():
             rundef['env'][k] = str(v)
         # now set params based on the run entry
         for k, v in run.get('params', {}).items():

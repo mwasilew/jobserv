@@ -176,8 +176,9 @@ class ProjectSchemaTest(JobServTest):
             dbrun.name = 'flake8'
             dbrun.build.build_id = 1
             dbrun.api_key = '123'
-            run = proj._data['triggers'][0]['runs'][0]
-            rundef = proj.get_run_definition(dbrun, run, 'github_pr', {}, {})
+            trigger = proj._data['triggers'][0]
+            run = trigger['runs'][0]
+            rundef = proj.get_run_definition(dbrun, run, trigger, {}, {})
             repo = json.loads(rundef).get('script-repo')
             self.assertEqual({'clone-url': 'url', 'path': 'path/foo.sh'}, repo)
 
@@ -199,10 +200,11 @@ class ProjectSchemaTest(JobServTest):
             dbrun.build.build_id = 1
             dbrun.name = 'flake8'
             dbrun.api_key = 'secret'
-            run = proj._data['triggers'][0]['runs'][0]
+            trigger = proj._data['triggers'][0]
+            run = trigger['runs'][0]
 
             with self.assertRaises(ApiError):
-                proj.get_run_definition(dbrun, run, 'github_pr', {}, {})
+                proj.get_run_definition(dbrun, run, trigger, {}, {})
 
     def test_bad_container_auth(self):
         with open(os.path.join(self.examples, 'private-container.yml')) as f:
@@ -214,11 +216,12 @@ class ProjectSchemaTest(JobServTest):
             dbrun.build.build_id = 1
             dbrun.name = 'flake8'
             dbrun.api_key = 'secret'
-            run = proj._data['triggers'][0]['runs'][0]
+            trigger = proj._data['triggers'][0]
+            run = trigger['runs'][0]
 
             exp = 'not defined in the run\'s secrets'
             with self.assertRaisesRegex(ApiError, exp):
-                proj.get_run_definition(dbrun, run, 'github_pr', {}, {})
+                proj.get_run_definition(dbrun, run, trigger, {}, {})
 
     def test_host_tag_rundef(self):
         with open(os.path.join(self.examples, 'host-tag.yml')) as f:
@@ -230,8 +233,9 @@ class ProjectSchemaTest(JobServTest):
             dbrun.name = 'flake8'
             dbrun.build.build_id = 1
             dbrun.api_key = '123'
-            run = proj._data['triggers'][0]['runs'][0]
-            rundef = proj.get_run_definition(dbrun, run, 'github_pr', {}, {})
+            trigger = proj._data['triggers'][0]
+            run = trigger['runs'][0]
+            rundef = proj.get_run_definition(dbrun, run, trigger, {}, {})
             data = json.loads(rundef)
             self.assertEqual('aarch6%', data['host-tag'])
             self.assertEqual('aarch6%', dbrun.host_tag)
@@ -246,14 +250,16 @@ class ProjectSchemaTest(JobServTest):
             dbrun.name = 'flake8'
             dbrun.build.build_id = 1
             dbrun.api_key = '123'
-            run = proj._data['triggers'][0]['runs'][1]
-            rundef = proj.get_run_definition(dbrun, run, 'github_pr', {}, {})
+            trigger = proj._data['triggers'][0]
+            run = trigger['runs'][1]
+            rundef = proj.get_run_definition(dbrun, run, trigger, {}, {})
             data = json.loads(rundef)
             self.assertEqual('aarch64', data['host-tag'])
             self.assertEqual('aarch64', dbrun.host_tag)
 
-            run = proj._data['triggers'][0]['runs'][2]
-            rundef = proj.get_run_definition(dbrun, run, 'github_pr', {}, {})
+            trigger = proj._data['triggers'][0]
+            run = trigger['runs'][2]
+            rundef = proj.get_run_definition(dbrun, run, trigger, {}, {})
             data = json.loads(rundef)
             self.assertEqual('armhf', data['host-tag'])
             self.assertEqual('armhf', dbrun.host_tag)
@@ -265,3 +271,22 @@ class ProjectSchemaTest(JobServTest):
             exp = '"host-tag" or loop-on host-tag parameter required'
             with self.assertRaisesRegex(Exception, exp):
                 ProjectDefinition.validate_data(data)
+
+    def test_params(self):
+        """Make sure we get project, trigger, and run params"""
+        with open(os.path.join(self.examples, 'parameters.yml')) as f:
+            data = yaml.safe_load(f)
+            proj = ProjectDefinition.validate_data(data)
+
+            dbrun = Mock()
+            dbrun.build.project.name = 'jobserv'
+            dbrun.name = 'basic'
+            dbrun.build.build_id = 1
+            dbrun.api_key = '123'
+            trigger = proj._data['triggers'][0]
+            run = trigger['runs'][0]
+            rundef = proj.get_run_definition(dbrun, run, trigger, {}, {})
+            data = json.loads(rundef)
+            self.assertEqual('GLOBAL', data['env']['GLOBAL_PARAM'])
+            self.assertEqual('RUN', data['env']['RUN_PARAM'])
+            self.assertEqual('TRIGGER', data['env']['TRIGGER_PARAM'])
