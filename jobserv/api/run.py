@@ -299,9 +299,9 @@ def run_get_artifact(proj, build_id, run, path):
                 {'Content-Type': 'text/plain', 'X-RUN-STATUS': r.status.name})
     try:
         fd = Storage().console_logfd(r, 'rb')
-        offset = request.args.get('X-OFFSET')
+        offset = request.headers.get('X-OFFSET')
         if offset:
-            fd.seek(0, offset)
+            fd.seek(int(offset), 0)
         resp = make_response(send_file(fd, mimetype='text/plain'))
         resp.headers['X-RUN-STATUS'] = r.status.name
         return resp
