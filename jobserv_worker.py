@@ -265,7 +265,7 @@ Type=simple
 User={user}
 WorkingDirectory={working_dir}
 ExecStart={command}
-Restart=on-failure
+Restart=always
 
 [Install]
 WantedBy=multi-user.target
