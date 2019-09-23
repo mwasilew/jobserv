@@ -356,7 +356,7 @@ def _delete_rundir(rundir):
         sys.exit(1)
 
 
-def _handle_reboot(rundir, rundef, cold):
+def _handle_reboot(rundir, jobserv, rundef, cold):
     _set_rebooting()
     log.warn('RebootAndContinue(cold=%s) requested by %s',
              cold, rundef['run_url'])
@@ -372,8 +372,18 @@ def _handle_reboot(rundir, rundef, cold):
         cmd = config['tools'][key]
     except KeyError:
         cmd = '/usr/bin/' + key
-    if os.fork() == 0:
-        os.execv(cmd, [cmd])
+
+    for i in range(10):
+        r = subprocess.run(
+            [cmd], stderr=subprocess.STDOUT, stdout=subprocess.PIPE)
+        if r.returncode == 0:
+            break
+        msg = 'Unable to reboot system. Error is:\n| '
+        msg += '\n| '.join(r.stdout.decode().splitlines())
+        msg += '\nRetrying in %d seconds' % (i + 1)
+        jobserv.update_run(rundef, None, msg)
+        time.sleep(i+1)
+
     # we can't just exit here or the worker's "poll" loop might accidentally
     # pull in another run to handle. So lets sleep for 3 minutes. If we
     # are still running then the reboot command has failed.
@@ -398,7 +408,7 @@ def _handle_run(jobserv, rundef, rundir=None):
                 try:
                     m.handler.execute(os.path.dirname(script), rundir, rundef)
                 except m.handler.RebootAndContinue as e:
-                    _handle_reboot(rundir, rundef, e.cold)
+                    _handle_reboot(rundir, jobserv, rundef, e.cold)
                 _delete_rundir(rundir)
                 if FEATURE_NEW_LOOPER:
                     log.info('Exiting new looper after run')
