@@ -240,8 +240,9 @@ class JobServ(object):
         headers = {
             'content-type': 'text/plain',
             'Authorization': 'Token ' + rundef['api_key'],
-            'X-RUN-STATUS': status,
         }
+        if status:
+            headers['X-RUN-STATUS'] = status
         for i in range(8):
             if i:
                 log.info('Failed to update run, sleeping and retrying')
