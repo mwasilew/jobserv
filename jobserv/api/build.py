@@ -24,7 +24,7 @@ def build_list(proj):
 
 @blueprint.route('/builds/', methods=('POST',))
 def build_create(proj):
-    permissions.assert_internal_user()
+    permissions.assert_can_build(proj)
     p = Project.query.filter(Project.name == proj).first_or_404()
     d = request.get_json() or {}
     b = trigger_build(p, d.get('reason'), d.get('trigger-name'),

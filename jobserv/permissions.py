@@ -57,6 +57,11 @@ def assert_can_promote(project, build_id):
     assert_internal_user()
 
 
+def assert_can_build(project):
+    '''Is the requestor allowed to trigger a build.'''
+    assert_internal_user()
+
+
 def _sign(url, headers, method):
     headers['X-Time'] = str(round(time.time()))
     msg = '%s,%s,%s' % (method, headers['X-Time'], url)
