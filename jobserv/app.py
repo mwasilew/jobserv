@@ -116,7 +116,7 @@ def add_trigger(project, user, type, secrets, definition_repo, definition_file,
     key = ''.join(random.SystemRandom().choice(
         string.ascii_lowercase + string.ascii_uppercase + string.digits)
         for _ in range(32))
-    secret_map = {'webhook-key': key}
+    secret_map = {}
     for secret in (secrets or []):
         k, v = secret.split('=', 1)
         secret_map[k.strip()] = v.strip()
@@ -130,12 +130,14 @@ def add_trigger(project, user, type, secrets, definition_repo, definition_file,
         user, type, p, definition_repo, definition_file, secret_map))
 
     if type == TriggerTypes.gitlab_mr.value:
+        secret_map['webhook-key'] = key
         if 'gitlabtok' not in secret_map or 'gitlabuser' not in secret_map:
             raise ValueError(
                 '"gitlabtok" and "gitlabuser" are required secrets')
         _register_gitlab_hook(
             project, hook_url, secret_map['gitlabtok'], key, server_name)
     elif type == TriggerTypes.github_pr.value:
+        secret_map['webhook-key'] = key
         if 'githubtok' not in secret_map:
             raise ValueError('"githubtok" is required in secrets')
         _register_github_hook(
