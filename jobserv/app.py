@@ -69,6 +69,29 @@ def project_create(name):
     db.session.commit()
 
 
+@project.command('delete')
+@click.argument('name')
+def project_delete(name):
+    val = input('Are you sure you want to delete: %s? Y/N ' % name)
+    if val != 'Y':
+        click.echo('exiting')
+        return
+    p = Project.query.filter(Project.name == name).one()
+    for t in p.triggers:
+        db.session.delete(t)
+    db.session.commit()
+
+    for b in p.builds:
+        db.session.delete(b)
+    db.session.commit()
+
+    db.session.delete(p)
+    db.session.commit()
+
+    click.echo('The project has been deleted from the database.')
+    click.echo('Build artifacts still remain in the datastore and must be removed by hand')  # NOQA
+
+
 def _register_gitlab_hook(project, url, api_token, hook_token, server_name):
     data = {
         'url': 'https://%s/gitlab/%s/' % (server_name, project),
