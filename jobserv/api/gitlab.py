@@ -11,7 +11,7 @@ import requests
 
 from flask import Blueprint, request, url_for
 
-from jobserv.jsend import ApiError, get_or_404, jsendify
+from jobserv.jsend import ApiError, jsendify
 from jobserv.models import Project, ProjectTrigger, TriggerTypes
 from jobserv.settings import RUN_URL_FMT
 from jobserv.trigger import trigger_build
@@ -146,6 +146,26 @@ def _validate_payload(trigger):
         raise ApiError(403, 'Invalid X-Gitlab-Token')
 
 
+def _find_trigger(proj):
+    triggers = ProjectTrigger.query.filter(
+        ProjectTrigger.type == TriggerTypes.gitlab_mr.value
+    ).join(
+        Project
+    ).filter(
+        Project.name == proj
+    )
+    last_exc = None
+    for t in triggers:
+        try:
+            _validate_payload(t)
+            return t
+        except Exception as e:
+            last_exc = e
+    if last_exc is None:
+        raise ApiError(404, 'Trigger for project does not exist')
+    raise last_exc
+
+
 def _filter_events(event):
     events = ('Merge Request Hook', 'Note Hook')
     if event not in events:
@@ -154,14 +174,7 @@ def _filter_events(event):
 
 @blueprint.route('/<project:proj>/', methods=('POST',))
 def on_webhook(proj):
-    trigger = get_or_404(ProjectTrigger.query.filter(
-        ProjectTrigger.type == TriggerTypes.gitlab_mr.value
-    ).join(
-        Project
-    ).filter(
-        Project.name == proj
-    ))
-    _validate_payload(trigger)
+    trigger = _find_trigger(proj)
     event = request.headers['X-Gitlab-Event']
     _filter_events(event)
 
