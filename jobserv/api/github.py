@@ -143,6 +143,26 @@ def _validate_payload(trigger):
         raise ApiError(403, 'Invalid X_HUB_SIGNATURE')
 
 
+def _find_trigger(proj):
+    triggers = ProjectTrigger.query.filter(
+        ProjectTrigger.type == TriggerTypes.github_pr.value
+    ).join(
+        Project
+    ).filter(
+        Project.name == proj
+    )
+    last_exc = None
+    for t in triggers:
+        try:
+            _validate_payload(t)
+            return t
+        except Exception as e:
+            last_exc = e
+    if last_exc is None:
+        raise ApiError(404, 'Trigger for project does not exist')
+    raise last_exc
+
+
 def _filter_events(event):
     ignores = ('fork', 'ping', 'push', 'status', 'pull_request_review',
                'pull_request_review_comment')
@@ -155,14 +175,7 @@ def _filter_events(event):
 
 @blueprint.route('/<project:proj>/', methods=('POST',))
 def on_webhook(proj):
-    trigger = get_or_404(ProjectTrigger.query.filter(
-        ProjectTrigger.type == TriggerTypes.github_pr.value
-    ).join(
-        Project
-    ).filter(
-        Project.name == proj
-    ))
-    _validate_payload(trigger)
+    trigger = _find_trigger(proj)
     event = request.headers.get('X-Github-Event')
     _filter_events(event)
 
