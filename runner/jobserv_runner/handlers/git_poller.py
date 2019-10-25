@@ -2,7 +2,6 @@
 # Author: Andy Doan <andy.doan@linaro.org>
 
 import os
-import urllib.parse
 
 import requests
 
