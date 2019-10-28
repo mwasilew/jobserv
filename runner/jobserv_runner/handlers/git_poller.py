@@ -9,6 +9,9 @@ from base64 import b64encode
 
 from jobserv_runner.handlers.simple import HandlerError, SimpleHandler
 
+SUPPORTS_SUBMODULE = os.path.exists('/usr/libexec/git-core/git-submodule') or \
+                     os.path.exists('/usr/lib/git-core/git-submodule')
+
 
 def b64(val):
     return b64encode(val.encode()).decode()
@@ -64,7 +67,11 @@ class GitPoller(SimpleHandler):
         header = self._get_http_header(log, clone_url)
         if header:
             args.extend(['-c', 'http.extraheader=' + header])
-        args.extend(['clone', '--recursive', clone_url, dst])
+        if SUPPORTS_SUBMODULE:
+            log.info('Git install supports submodules')
+            args.extend(['clone', '--recursive', clone_url, dst])
+        else:
+            args.extend(['clone', clone_url, dst])
         if not log.exec(args):
             raise HandlerError('Unable to clone: ' + clone_url)
 
@@ -75,9 +82,9 @@ class GitPoller(SimpleHandler):
                 raise HandlerError('Unable to branch: ' + sha)
             if not log.exec(['git', 'checkout', 'jobserv-run'], cwd=dst):
                 raise HandlerError('Unable to checkout: ' + sha)
-            # `git submodule update` is a no-op for repos without submodules
-            if not log.exec(['git', 'submodule', 'update'], cwd=dst):
-                raise HandlerError('Unable to update submodule(s)')
+            if SUPPORTS_SUBMODULE:
+                if not log.exec(['git', 'submodule', 'update'], cwd=dst):
+                    raise HandlerError('Unable to update submodule(s)')
 
     def prepare_mounts(self):
         mounts = super().prepare_mounts()
