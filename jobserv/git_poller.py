@@ -262,12 +262,13 @@ def _cgit_log(trigger: ProjectTrigger, change_params: Dict[str, str]) -> str:
     url += '/atom'
 
     try:
-        r = requests.get(url, params={'h': head})
+        params = {'h': head}
+        r = requests.get(url, params=params)
         if r.status_code == 401 and gheader:
             log.info('Authorization required using git header in secrets')
             key, val = gheader.split(':', 1)
             headers = {key.strip(): val.strip()}
-            r = requests.get(url, headers=headers)
+            r = requests.get(url, headers=headers, params=params)
     except Exception as e:
         log.exception('Unable to get %s', url)
         return 'Unable to get %s\n%s' % (url, str(e))
