@@ -372,8 +372,6 @@ class Run(db.Model, StatusMixin):
                             cascade='save-update, merge, delete')
     worker = db.relationship('Worker')
 
-    in_test_mode = False
-
     __table_args__ = (
         # can't have the same named run for a single build
         db.UniqueConstraint('build_id', 'name', name='run_name_uc'),
@@ -450,16 +448,7 @@ class Run(db.Model, StatusMixin):
 
         # this is a trick to allow us to find the ID of the row we updated
         id_trick = 'id = @run_id := id'
-        # NOTE - updates with ordering are not honored by unit testing with
-        # sqlite because this feature isn't compiled in by default:
-        #  https://www.sqlite.org/compile.html#enable_update_delete_limit
         limit = 'ORDER BY `queue_priority`, `build_id`, `id` asc LIMIT 1'
-        if Run.in_test_mode:
-            # of course, sqlite isn't advanced enough, so we hack something
-            # for unit-testing
-            id_trick = 'id = id'
-            # libsqlite3 under alpine can't handle the limit statement
-            limit = ''
 
         rows = cursor.execute('''
             UPDATE runs SET
@@ -469,8 +458,6 @@ class Run(db.Model, StatusMixin):
               AND (%s)
             %s''' % (id_trick, worker.name, tags, limit))
         db.session.commit()
-        if Run.in_test_mode:
-            return Run.query.filter(Run.status == BuildStatus.RUNNING).first()
         if rows == 1:
             cursor.execute('select @run_id')
             r = Run.query.get(cursor.fetchone()[0])

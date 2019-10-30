@@ -5,6 +5,7 @@ import json
 import os
 import shutil
 import tempfile
+import unittest
 
 import jobserv.models
 from jobserv.models import Build, BuildStatus, Project, Run, Worker, db
@@ -96,7 +97,8 @@ class WorkerAPITest(JobServTest):
 
     @patch('jobserv.api.worker.Storage')
     def test_worker_get_run(self, storage):
-        Run.in_test_mode = db.engine.dialect.name == 'sqlite'
+        if db.engine.dialect.name == 'sqlite':
+            raise unittest.SkipTest('Test requires MySQL')
         rundef = {
             'run_url': 'foo',
             'runner_url': 'foo',
