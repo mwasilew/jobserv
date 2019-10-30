@@ -96,7 +96,7 @@ class WorkerAPITest(JobServTest):
 
     @patch('jobserv.api.worker.Storage')
     def test_worker_get_run(self, storage):
-        Run.in_test_mode = True
+        Run.in_test_mode = db.engine.dialect.name == 'sqlite'
         rundef = {
             'run_url': 'foo',
             'runner_url': 'foo',
