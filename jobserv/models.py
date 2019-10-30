@@ -446,17 +446,18 @@ class Run(db.Model, StatusMixin):
         conn = db.session.connection().connection
         cursor = conn.cursor()
 
-        # this is a trick to allow us to find the ID of the row we updated
-        id_trick = 'id = @run_id := id'
-        limit = 'ORDER BY `queue_priority`, `build_id`, `id` asc LIMIT 1'
-
         rows = cursor.execute('''
-            UPDATE runs SET
-                `_status` = 2, %s, `worker_name` = "%s"
+            UPDATE runs
+            SET
+                -- A trick to allow us to find the ID of the row we updated
+                id = @run_id := id,
+                _status = 2,
+                worker_name = "%s"
             WHERE
-                `_status` = 1
+                _status = 1
               AND (%s)
-            %s''' % (id_trick, worker.name, tags, limit))
+            ORDER BY queue_priority, build_id, id ASC
+            LIMIT 1''' % (worker.name, tags))
         db.session.commit()
         if rows == 1:
             cursor.execute('select @run_id')
