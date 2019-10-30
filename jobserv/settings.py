@@ -16,7 +16,8 @@ if _fmt:
     SQLALCHEMY_DATABASE_URI = _fmt.format(
         db_user=os.environ['DB_USER'], db_pass=os.environ['DB_PASS'])
 else:
-    SQLALCHEMY_DATABASE_URI = 'sqlite:////tmp/test.db'
+    SQLALCHEMY_DATABASE_URI = os.environ.get(
+        'SQLALCHEMY_DATABASE_URI', 'sqlite:////tmp/test.db')
 
 PERMISSIONS_MODULE = os.environ.get(
     'PERMISSIONS_MODULE', 'jobserv.permissions')

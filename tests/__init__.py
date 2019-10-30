@@ -17,7 +17,6 @@ class JobServTest(TestCase):
 
     def create_app(self):
         settings.TESTING = True
-        settings.SQLALCHEMY_DATABASE_URI = 'sqlite://'
         settings.PRESERVE_CONTEXT_ON_EXCEPTION = False
         ProjectTrigger.fernet = Fernet(Fernet.generate_key())
         permissions.INTERNAL_API_KEY = 'just for testing'.encode()

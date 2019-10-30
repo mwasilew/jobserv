@@ -14,6 +14,7 @@ $VENV/bin/pip3 install -r requirements.txt
 $VENV/bin/pip3 install junitxml==0.7 python-subunit==1.3.0
 
 set -o pipefail
+SQLALCHEMY_DATABASE_URI='sqlite://' \
 PYTHONPATH=./ $VENV/bin/python3 -m subunit.run discover \
 	| $VENV/bin/subunit2junitxml --no-passthrough \
 	| tee /archive/junit.xml
