@@ -26,6 +26,10 @@ class PostError(Exception):
     pass
 
 
+class RunCancelledError(Exception):
+    pass
+
+
 def urllib_error_str(e):
     if hasattr(e, 'code'):
         error = 'HTTP_%d' % e.code
@@ -43,6 +47,8 @@ def _post(url, data, headers, raise_error=False):
         url, data=data, headers=headers, method='POST')
     try:
         resp = urllib.request.urlopen(req)
+        if resp.headers.get('X-JOBSERV-CANCEL'):
+            raise RunCancelledError()
         return resp
     except urllib.error.URLError as e:
         error = urllib_error_str(e)
