@@ -1,0 +1,17 @@
+#!/bin/sh -e
+# Checks if the git-poller is alive by looking at the timestamp file
+
+TSFILE="${TSFILE-/tmp/git-poller.timestamp}"
+
+now=$(date +%s)
+last=$(cat $TSFILE || echo 0)
+
+delta=$(($now-$last))
+if [ $delta -gt 600 ] ; then
+	echo "git-poller appears to be stuck. Inactive for $delta seconds"
+	exit 1
+fi
+
+if [ -n "$DEBUG" ] ; then
+	echo "DEBUG: last active $delta seconds ago"
+fi

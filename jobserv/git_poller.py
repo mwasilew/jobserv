@@ -395,5 +395,7 @@ def run():
         last_run = time.time()
         try:
             _poll(entries)
+            with open('/tmp/git-poller.timestamp', 'w') as f:
+                f.write('%d' % time.time())
         except Exception:
             log.exception('Error getting cache, retrying in a bit')
