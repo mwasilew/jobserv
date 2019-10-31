@@ -46,10 +46,11 @@ def get_cumulative_status(items):
        status of its child TestResults and Runs.'''
     status = BuildStatus.QUEUED  # Default guess to QUEUED
     states = set([x.status for x in items])
-    if BuildStatus.RUNNING in states or BuildStatus.UPLOADING in states:
+    if BuildStatus.RUNNING in states or BuildStatus.UPLOADING in states \
+            or BuildStatus.CANCELLING in states:
         # Something is still running
         status = BuildStatus.RUNNING
-        if BuildStatus.FAILED in states:
+        if BuildStatus.FAILED in states or BuildStatus.CANCELLING in states:
             status = BuildStatus.RUNNING_WITH_FAILURES
     if BuildStatus.QUEUED in states and BuildStatus.FAILED in states:
         status = BuildStatus.RUNNING_WITH_FAILURES
@@ -183,6 +184,8 @@ class BuildStatus(enum.Enum):
     PROMOTED = 7  # ie - the build got "released"
 
     SKIPPED = 8  # only valid for Test and TestResult
+    # only valid for Run. Its been *requested*. The worker will then *fail*
+    CANCELLING = 9
 
 
 class StatusComparator(Comparator):

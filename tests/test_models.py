@@ -131,6 +131,20 @@ class BuildTest(JobServTest):
         )
         self.assertEqual(BuildStatus.PASSED, get_cumulative_status(items))
 
+        items = (
+            unittest.mock.Mock(status=BuildStatus.QUEUED),
+            unittest.mock.Mock(status=BuildStatus.CANCELLING),
+        )
+        self.assertEqual(
+            BuildStatus.RUNNING_WITH_FAILURES, get_cumulative_status(items))
+
+        items = (
+            unittest.mock.Mock(status=BuildStatus.PASSED),
+            unittest.mock.Mock(status=BuildStatus.CANCELLING),
+        )
+        self.assertEqual(
+            BuildStatus.RUNNING_WITH_FAILURES, get_cumulative_status(items))
+
 
 class RunTest(JobServTest):
     def setUp(self):

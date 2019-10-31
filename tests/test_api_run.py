@@ -152,6 +152,20 @@ class RunAPITest(JobServTest):
         self.assertEqual('text/plain', resp.mimetype)
 
     @patch('jobserv.storage.gce_storage.storage')
+    def test_run_cancel(self, storage):
+        r = Run(self.build, 'run0')
+        db.session.add(r)
+        db.session.commit()
+
+        headers = [
+            ('Authorization', 'Token %s' % r.api_key),
+            ('X-RUN-STATUS', 'CANCEL'),
+        ]
+        self._post(self.urlbase + 'run0/', 'message', headers, 200)
+        db.session.refresh(r)
+        self.assertEqual(BuildStatus.CANCELLING, r.status)
+
+    @patch('jobserv.storage.gce_storage.storage')
     def test_run_metadata(self, storage):
         r = Run(self.build, 'run0')
         db.session.add(r)
