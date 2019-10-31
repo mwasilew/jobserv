@@ -472,7 +472,7 @@ class Run(db.Model, StatusMixin):
                     GROUP BY
                         projects.id, projects.name, projects.synchronous_builds
                 )
-              ORDER BY runs.queue_priority, runs.build_id, runs.id ASC
+              ORDER BY runs.queue_priority DESC, runs.build_id, runs.id ASC
               LIMIT 1
             '''.format(tags=tags))
         if rows:

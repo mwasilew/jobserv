@@ -241,6 +241,56 @@ class WorkerAPITest(JobServTest):
             [BuildStatus.RUNNING, BuildStatus.QUEUED, BuildStatus.RUNNING],
             [x.status for x in Run.query])
 
+    @patch('jobserv.api.worker.Storage')
+    def test_worker_queue_priority(self, storage):
+        """Validate queue priorities for Runs are honored.
+
+           1. Create a normal project with 2 QUEUED builds.
+           2. Set the priority of the newer build higher than the older build
+           3. Verify queue priority is done properly.
+        """
+        if db.engine.dialect.name == 'sqlite':
+            raise unittest.SkipTest('Test requires MySQL')
+        rundef = {
+            'run_url': 'foo',
+            'runner_url': 'foo',
+            'env': {}
+        }
+        storage().get_run_definition.return_value = json.dumps(rundef)
+        w = Worker('w1', 'ubuntu', 12, 2, 'aarch64', 'key', 2, ['aarch96'])
+        w.enlisted = True
+        w.online = True
+        db.session.add(w)
+
+        self.create_projects('job-1')
+        p = Project.query.all()[0]
+        p.synchronous_builds = True
+        db.session.commit()
+
+        b = Build.create(p)
+        r = Run(b, 'r1')
+        r.host_tag = 'aarch96'
+        db.session.add(r)
+        r = Run(b, 'r2')
+        r.host_tag = 'aarch96'
+        r.queue_priority = 2  # this is *newer* build but *higher* priority
+        db.session.add(r)
+
+        db.session.commit()
+        headers = [
+            ('Content-type', 'application/json'),
+            ('Authorization', 'Token key'),
+        ]
+        qs = 'available_runners=1&foo=2'
+        resp = self.client.get(
+            '/workers/w1/', headers=headers, query_string=qs)
+        self.assertEqual(200, resp.status_code, resp.data)
+        data = json.loads(resp.data.decode())
+        self.assertEqual(1, len(data['data']['worker']['run-defs']))
+        self.assertEqual(
+            [BuildStatus.QUEUED, BuildStatus.RUNNING],
+            [x.status for x in Run.query])
+
     def test_worker_create_bad(self):
         data = {
         }
