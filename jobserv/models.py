@@ -71,15 +71,19 @@ class Project(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String(80), unique=True)
 
+    synchronous_builds = db.Column(db.Boolean, default=False)
+
     builds = db.relationship('Build', order_by='-Build.id')
     triggers = db.relationship('ProjectTrigger')
 
-    def __init__(self, name=None):
+    def __init__(self, name=None, synchronous_builds=False):
         self.name = name
+        self.synchronous_builds = synchronous_builds
 
     def as_json(self, detailed=False):
         data = {
             'name': self.name,
+            'synchronous-builds': self.synchronous_builds,
             'url': url_for(
                 'api_project.project_get', proj=self.name, _external=True),
         }
@@ -440,6 +444,10 @@ class Run(db.Model, StatusMixin):
         # full-proof to try and update a single row and see if it changed.
         # If it didn't change, that means we lost a race condition and the
         # run has been assigned to another worker.
+
+        # Forcing 2 queries seems bad, but we have to JOIN on another table
+        # and MySQL doesn't allow UPDATEs that do that.
+        # So we first find a suitable Run:
         tags = '`host_tag` like "%s"' % worker.name
         for t in worker.host_tags.split(','):
             tags += ' OR `host_tag` like "%s"' % t.strip()
@@ -447,24 +455,45 @@ class Run(db.Model, StatusMixin):
         cursor = conn.cursor()
 
         rows = cursor.execute('''
-            UPDATE runs
-            SET
-                -- A trick to allow us to find the ID of the row we updated
-                id = @run_id := id,
-                _status = 2,
-                worker_name = "%s"
+            SELECT runs.id FROM runs
+            JOIN builds on builds.id = runs.build_id
+            JOIN projects on projects.id = builds.proj_id
             WHERE
-                _status = 1
-              AND (%s)
-            ORDER BY queue_priority, build_id, id ASC
-            LIMIT 1''' % (worker.name, tags))
-        db.session.commit()
-        if rows == 1:
-            cursor.execute('select @run_id')
-            r = Run.query.get(cursor.fetchone()[0])
-            db.session.add(RunEvents(r, BuildStatus.RUNNING))
+                runs._status = 1
+              AND ({tags})
+              AND
+                projects.id NOT IN (
+                    SELECT projects.id
+                    FROM projects
+                    JOIN builds ON projects.id = builds.proj_id
+                    JOIN runs on runs.build_id = builds.id
+                    WHERE
+                        runs._status = 2 AND projects.synchronous_builds = true
+                    GROUP BY
+                        projects.id, projects.name, projects.synchronous_builds
+                )
+              ORDER BY runs.queue_priority, runs.build_id, runs.id ASC
+              LIMIT 1
+            '''.format(tags=tags))
+        if rows:
+            # We have a suitable run
+            rows = cursor.execute('''
+                UPDATE runs
+                SET
+                    -- A trick to allow us to find the ID of the row we updated
+                    id = @run_id := id,
+                    _status = 2,
+                    worker_name = "{worker}"
+                WHERE
+                    id = {run_id}
+                '''.format(worker=worker.name, run_id=cursor.fetchone()[0]))
             db.session.commit()
-            return r
+            if rows == 1:
+                cursor.execute('select @run_id')
+                r = Run.query.get(cursor.fetchone()[0])
+                db.session.add(RunEvents(r, BuildStatus.RUNNING))
+                db.session.commit()
+                return r
 
 
 class RunEvents(db.Model, StatusMixin):
