@@ -41,7 +41,7 @@ orig_create = mysqldb.MySQLDialect_mysqldb.create_connect_args
 mysqldb.MySQLDialect_mysqldb.create_connect_args = hack_create_connect_args
 
 
-def get_cumulative_status(obj, items):
+def get_cumulative_status(items):
     '''A helper used by Test and Build to calculate the status based on the
        status of its child TestResults and Runs.'''
     status = BuildStatus.QUEUED  # Default guess to QUEUED
@@ -293,7 +293,7 @@ class Build(db.Model, StatusMixin):
         return data
 
     def refresh_status(self):
-        status = get_cumulative_status(self, self.runs)
+        status = get_cumulative_status(self.runs)
         if self.status != status:
             self.status = status
             db.session.add(BuildEvents(self, status))
@@ -547,7 +547,7 @@ class Test(db.Model, StatusMixin):
             status = BuildStatus[status]
         if self.status != status:
             self.status = status
-            return get_cumulative_status(self.run, self.run.tests)
+            return get_cumulative_status(self.run.tests)
 
     @property
     def complete(self):

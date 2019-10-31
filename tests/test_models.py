@@ -6,6 +6,7 @@ from sqlalchemy.exc import IntegrityError
 
 from jobserv.models import (
     db,
+    get_cumulative_status,
     Build,
     BuildStatus,
     Project,
@@ -85,6 +86,50 @@ class BuildTest(JobServTest):
     def test_build_events(self):
         b = Build.create(self.proj)
         self.assertEqual(['QUEUED'], [x.status.name for x in b.status_events])
+
+    def test_cumulative_status(self):
+        items = (
+            unittest.mock.Mock(status=BuildStatus.QUEUED),
+            unittest.mock.Mock(status=BuildStatus.QUEUED),
+        )
+        self.assertEqual(BuildStatus.QUEUED, get_cumulative_status(items))
+
+        items = (
+            unittest.mock.Mock(status=BuildStatus.RUNNING),
+            unittest.mock.Mock(status=BuildStatus.QUEUED),
+        )
+        self.assertEqual(BuildStatus.RUNNING, get_cumulative_status(items))
+
+        items = (
+            unittest.mock.Mock(status=BuildStatus.RUNNING),
+            unittest.mock.Mock(status=BuildStatus.FAILED),
+        )
+        self.assertEqual(
+            BuildStatus.RUNNING_WITH_FAILURES, get_cumulative_status(items))
+
+        items = (
+            unittest.mock.Mock(status=BuildStatus.RUNNING),
+            unittest.mock.Mock(status=BuildStatus.PASSED),
+        )
+        self.assertEqual(BuildStatus.RUNNING, get_cumulative_status(items))
+
+        items = (
+            unittest.mock.Mock(status=BuildStatus.FAILED),
+            unittest.mock.Mock(status=BuildStatus.PASSED),
+        )
+        self.assertEqual(BuildStatus.FAILED, get_cumulative_status(items))
+
+        items = (
+            unittest.mock.Mock(status=BuildStatus.PASSED),
+            unittest.mock.Mock(status=BuildStatus.PASSED),
+        )
+        self.assertEqual(BuildStatus.PASSED, get_cumulative_status(items))
+
+        items = (
+            unittest.mock.Mock(status=BuildStatus.SKIPPED),
+            unittest.mock.Mock(status=BuildStatus.PASSED),
+        )
+        self.assertEqual(BuildStatus.PASSED, get_cumulative_status(items))
 
 
 class RunTest(JobServTest):
