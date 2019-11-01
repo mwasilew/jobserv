@@ -525,7 +525,8 @@ class SimpleHandler(object):
         except HandlerError as e:
             jobserv.update_status('FAILED', str(e))
         except RunCancelledError as e:
-            jobserv.update_status('FAILED', 'Run cancelled from server')
+            jobserv.update_status('FAILED',
+                                  'Run cancelled from server\n' + failed_msg)
         except Exception as e:
             if getattr(e, 'handler_logged', False):
                 # we've already logged the stack trace, just fail the run
