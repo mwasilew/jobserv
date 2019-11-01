@@ -35,6 +35,10 @@ class HealthApiTest(JobServTest):
         r.worker = w2
         r.status = BuildStatus.RUNNING
         db.session.add(r)
+        r = Run(b, 'run3rworker2')
+        r.worker = w2
+        r.status = BuildStatus.CANCELLING
+        db.session.add(r)
         db.session.commit()
 
         r = self.client.get('/health/runs/')
@@ -46,6 +50,6 @@ class HealthApiTest(JobServTest):
         self.assertEqual(1, d['health']['statuses']['UPLOADING'])
 
         self.assertEqual(1, len(d['health']['RUNNING']['worker1']))
-        self.assertEqual(2, len(d['health']['RUNNING']['worker2']))
+        self.assertEqual(3, len(d['health']['RUNNING']['worker2']))
 
         self.assertEqual(2, len(d['health']['QUEUED']))
