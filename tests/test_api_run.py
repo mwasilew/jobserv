@@ -112,6 +112,22 @@ class RunAPITest(JobServTest):
         permissions._sign(url, headers, 'POST')
         self._post(url, 'message', headers, 200)
 
+    @patch('jobserv.storage.gce_storage.storage')
+    def test_run_cancel(self, storage):
+        r = Run(self.build, 'run0')
+        db.session.add(r)
+        db.session.commit()
+
+        headers = {}
+        url = 'http://localhost' + self.urlbase + 'run0/cancel'
+
+        self._post(url, 'message', headers, 401)
+
+        permissions._sign(url, headers, 'POST')
+        self._post(url, '', headers, 202)
+        db.session.refresh(r)
+        self.assertEqual(BuildStatus.CANCELLING, r.status)
+
     def test_run_stream_not_authenticated(self):
         r = Run(self.build, 'run0')
         db.session.add(r)

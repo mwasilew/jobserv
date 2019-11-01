@@ -216,7 +216,10 @@ def run_update(proj, build_id, run):
                 if r.complete:
                     _handle_triggers(storage, r)
 
-    return jsendify({})
+    resp = jsendify({})
+    if r.status == BuildStatus.CANCELLING:
+        resp.headers['X-JOBSERV-CANCEL'] = '1'
+    return resp
 
 
 @blueprint.route('/<run>/rerun', methods=('POST',))
@@ -228,6 +231,15 @@ def run_rerun(proj, build_id, run):
     r.set_status(BuildStatus.QUEUED)
     db.session.commit()
     return jsendify({})
+
+
+@blueprint.route('/<run>/cancel', methods=('POST',))
+def run_cancel(proj, build_id, run):
+    r = _get_run(proj, build_id, run)
+    permissions.assert_can_build(r.build.project)
+    r.set_status(BuildStatus.CANCELLING)
+    db.session.commit()
+    return jsendify({}), 202
 
 
 def _get_run_def(proj, build_id, run):

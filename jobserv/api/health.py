@@ -29,10 +29,12 @@ def run_health():
     health['RUNNING'] = {}
     health['QUEUED'] = []
 
-    active = (BuildStatus.QUEUED, BuildStatus.RUNNING, BuildStatus.UPLOADING)
+    active = (BuildStatus.QUEUED, BuildStatus.RUNNING, BuildStatus.UPLOADING,
+              BuildStatus.CANCELLING)
     runs = Run.query.filter(Run.status.in_(active)).order_by(
         Run.queue_priority.asc(), Run.build_id.asc(), Run.id.asc())
     for run in runs:
+        print("ANDY RUN", run)
         url = url_for('api_run.run_get', proj=run.build.project.name,
                       build_id=run.build.build_id,
                       run=run.name, _external=True)
@@ -49,5 +51,5 @@ def run_health():
         else:
             worker = run.worker_name or '?'
             health['RUNNING'].setdefault(worker, []).append(item)
-
+    print("ANDY", health)
     return jsendify({'health': health})

@@ -7,6 +7,8 @@ import traceback
 
 from io import StringIO
 
+from jobserv_runner.jobserv import RunCancelledError
+
 
 class ContextLogger():
     """A simplistic logger that can be used to stream things to the local
@@ -39,7 +41,7 @@ class ContextLogger():
         return self
 
     def __exit__(self, type, value, tb):
-        if tb:
+        if type != RunCancelledError and tb:
             msg = ''.join(traceback.format_exception(type, value, tb))
             self.error(msg.replace('\n', '\n   |'))
 

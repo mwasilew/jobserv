@@ -17,7 +17,7 @@ import urllib.parse
 import uuid
 
 from jobserv_runner.cmd import stream_cmd
-from jobserv_runner.jobserv import JobServApi
+from jobserv_runner.jobserv import JobServApi, RunCancelledError
 from jobserv_runner.logging import ContextLogger
 
 passed_msg = '''Runner has completed
@@ -524,6 +524,9 @@ class SimpleHandler(object):
             raise
         except HandlerError as e:
             jobserv.update_status('FAILED', str(e))
+        except RunCancelledError as e:
+            jobserv.update_status('FAILED',
+                                  'Run cancelled from server\n' + failed_msg)
         except Exception as e:
             if getattr(e, 'handler_logged', False):
                 # we've already logged the stack trace, just fail the run

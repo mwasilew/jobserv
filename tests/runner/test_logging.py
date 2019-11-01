@@ -5,6 +5,7 @@ import datetime
 
 from unittest import TestCase
 
+from jobserv_runner.jobserv import RunCancelledError
 from jobserv_runner.logging import ContextLogger
 
 
@@ -34,3 +35,20 @@ class LoggerTest(TestCase):
 
     def test_error(self):
         self._test_log('error')
+
+    def test_exec(self):
+        log = TestLogger('test_exec')
+        log.now = datetime.datetime.utcnow()
+        with self.assertRaises(RuntimeError):
+            with log:
+                raise RuntimeError()
+        self.assertIn('|    raise RuntimeError', log.io.getvalue())
+
+    def test_exec_cancelled(self):
+        log = TestLogger('test_exec_cancelled')
+        log.now = datetime.datetime.utcnow()
+        with self.assertRaises(RunCancelledError):
+            with log:
+                raise RunCancelledError()
+        expected = '== %s: test_exec_cancelled\n' % log.now
+        self.assertEqual(expected, log.io.getvalue())

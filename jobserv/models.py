@@ -41,15 +41,16 @@ orig_create = mysqldb.MySQLDialect_mysqldb.create_connect_args
 mysqldb.MySQLDialect_mysqldb.create_connect_args = hack_create_connect_args
 
 
-def get_cumulative_status(obj, items):
+def get_cumulative_status(items):
     '''A helper used by Test and Build to calculate the status based on the
        status of its child TestResults and Runs.'''
     status = BuildStatus.QUEUED  # Default guess to QUEUED
     states = set([x.status for x in items])
-    if BuildStatus.RUNNING in states or BuildStatus.UPLOADING in states:
+    if BuildStatus.RUNNING in states or BuildStatus.UPLOADING in states \
+            or BuildStatus.CANCELLING in states:
         # Something is still running
         status = BuildStatus.RUNNING
-        if BuildStatus.FAILED in states:
+        if BuildStatus.FAILED in states or BuildStatus.CANCELLING in states:
             status = BuildStatus.RUNNING_WITH_FAILURES
     if BuildStatus.QUEUED in states and BuildStatus.FAILED in states:
         status = BuildStatus.RUNNING_WITH_FAILURES
@@ -183,6 +184,8 @@ class BuildStatus(enum.Enum):
     PROMOTED = 7  # ie - the build got "released"
 
     SKIPPED = 8  # only valid for Test and TestResult
+    # only valid for Run. Its been *requested*. The worker will then *fail*
+    CANCELLING = 9
 
 
 class StatusComparator(Comparator):
@@ -293,7 +296,7 @@ class Build(db.Model, StatusMixin):
         return data
 
     def refresh_status(self):
-        status = get_cumulative_status(self, self.runs)
+        status = get_cumulative_status(self.runs)
         if self.status != status:
             self.status = status
             db.session.add(BuildEvents(self, status))
@@ -547,7 +550,7 @@ class Test(db.Model, StatusMixin):
             status = BuildStatus[status]
         if self.status != status:
             self.status = status
-            return get_cumulative_status(self.run, self.run.tests)
+            return get_cumulative_status(self.run.tests)
 
     @property
     def complete(self):
