@@ -5,6 +5,7 @@ import json
 import os
 import shutil
 import tempfile
+import unittest
 
 import jobserv.models
 from jobserv.models import Build, BuildStatus, Project, Run, Worker, db
@@ -96,7 +97,8 @@ class WorkerAPITest(JobServTest):
 
     @patch('jobserv.api.worker.Storage')
     def test_worker_get_run(self, storage):
-        Run.in_test_mode = True
+        if db.engine.dialect.name == 'sqlite':
+            raise unittest.SkipTest('Test requires MySQL')
         rundef = {
             'run_url': 'foo',
             'runner_url': 'foo',
@@ -168,6 +170,126 @@ class WorkerAPITest(JobServTest):
         self.assertEqual(200, resp.status_code)
         data = json.loads(resp.data.decode())
         self.assertNotIn('run-defs', data['data']['worker'])
+
+    @patch('jobserv.api.worker.Storage')
+    def test_worker_sync_builds(self, storage):
+        """Ensure Projects with "synchronous_builds" are assigned properly.
+
+           1. Create a "synchronous" Project
+           2. Add a RUNNING build and and QUEUED build
+           3. Create a regular Project with a QUEUED build
+
+           Make sure the QUEUED build from the second Project is assigned
+           rather than the *older* but blocked build from the first Project.
+        """
+        if db.engine.dialect.name == 'sqlite':
+            raise unittest.SkipTest('Test requires MySQL')
+        rundef = {
+            'run_url': 'foo',
+            'runner_url': 'foo',
+            'env': {}
+        }
+        storage().get_run_definition.return_value = json.dumps(rundef)
+        w = Worker('w1', 'ubuntu', 12, 2, 'aarch64', 'key', 2, ['aarch96'])
+        w.enlisted = True
+        w.online = True
+        db.session.add(w)
+
+        # create a "synchronous" builds project
+        self.create_projects('job-1')
+        p = Project.query.all()[0]
+        p.synchronous_builds = True
+        db.session.commit()
+
+        # add an active build
+        b = Build.create(p)
+        r = Run(b, 'p1r1')
+        r.host_tag = 'aarch96'
+        r.status = BuildStatus.RUNNING
+        db.session.add(r)
+
+        # now queue a build up
+        b = Build.create(p)
+        r = Run(b, 'p1r2')
+        r.host_tag = 'aarch96'
+        db.session.add(r)
+
+        # create a normal project
+        self.create_projects('job-2')
+        p = Project.query.all()[1]
+        db.session.commit()
+
+        # queue up a build. This is "older" than the queued build for
+        # the synchronous project, but should get selected below
+        b = Build.create(p)
+        r = Run(b, 'p2r1')
+        r.host_tag = 'aarch96'
+        db.session.add(r)
+
+        db.session.commit()
+        headers = [
+            ('Content-type', 'application/json'),
+            ('Authorization', 'Token key'),
+        ]
+        qs = 'available_runners=1&foo=2'
+        resp = self.client.get(
+            '/workers/w1/', headers=headers, query_string=qs)
+        self.assertEqual(200, resp.status_code, resp.data)
+        data = json.loads(resp.data.decode())
+        self.assertEqual(1, len(data['data']['worker']['run-defs']))
+        self.assertEqual(
+            [BuildStatus.RUNNING, BuildStatus.QUEUED, BuildStatus.RUNNING],
+            [x.status for x in Run.query])
+
+    @patch('jobserv.api.worker.Storage')
+    def test_worker_queue_priority(self, storage):
+        """Validate queue priorities for Runs are honored.
+
+           1. Create a normal project with 2 QUEUED builds.
+           2. Set the priority of the newer build higher than the older build
+           3. Verify queue priority is done properly.
+        """
+        if db.engine.dialect.name == 'sqlite':
+            raise unittest.SkipTest('Test requires MySQL')
+        rundef = {
+            'run_url': 'foo',
+            'runner_url': 'foo',
+            'env': {}
+        }
+        storage().get_run_definition.return_value = json.dumps(rundef)
+        w = Worker('w1', 'ubuntu', 12, 2, 'aarch64', 'key', 2, ['aarch96'])
+        w.enlisted = True
+        w.online = True
+        db.session.add(w)
+
+        self.create_projects('job-1')
+        p = Project.query.all()[0]
+        p.synchronous_builds = True
+        db.session.commit()
+
+        b = Build.create(p)
+        r = Run(b, 'r1')
+        r.host_tag = 'aarch96'
+        db.session.add(r)
+        r = Run(b, 'r2')
+        r.host_tag = 'aarch96'
+        r.queue_priority = 2  # this is *newer* build but *higher* priority
+        db.session.add(r)
+
+        db.session.commit()
+        headers = [
+            ('Content-type', 'application/json'),
+            ('Authorization', 'Token key'),
+        ]
+        qs = 'available_runners=1&foo=2'
+        resp = self.client.get(
+            '/workers/w1/', headers=headers, query_string=qs)
+        self.assertEqual(200, resp.status_code, resp.data)
+        data = json.loads(resp.data.decode())
+        self.assertEqual(1, len(data['data']['worker']['run-defs']))
+        self.assertEqual(
+            [BuildStatus.QUEUED, BuildStatus.RUNNING],
+            [x.status for x in Run.query])
 
     def test_worker_create_bad(self):
         data = {

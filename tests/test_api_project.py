@@ -53,6 +53,13 @@ class ProjectAPITest(JobServTest):
         self.assertEqual(201, r.status_code, r.data)
         Project.query.filter(Project.name == 'foo').one()
 
+        r = self.client.post(
+            url, headers=headers,
+            data=json.dumps({'name': 'foo2', 'synchronous-builds': True}))
+        self.assertEqual(201, r.status_code, r.data)
+        p = Project.query.filter(Project.name == 'foo2').one()
+        self.assertTrue(p.synchronous_builds)
+
     def test_project_run_history(self):
         self.create_projects('proj-1')
         p = Project.query.all()[0]

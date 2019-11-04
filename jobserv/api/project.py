@@ -23,9 +23,10 @@ def project_create():
     proj = d.get('name')
     if not proj:
         raise ApiError(401, 'Missing required parameter: "name"')
+    sync = d.get('synchronous-builds', False)
 
     permissions.assert_internal_user()
-    db.session.add(Project(proj))
+    db.session.add(Project(proj, sync))
     db.session.commit()
 
     url = url_for('api_project.project_get', proj=proj, _external=True)
