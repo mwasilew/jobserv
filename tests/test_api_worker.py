@@ -208,6 +208,12 @@ class WorkerAPITest(JobServTest):
         r.status = BuildStatus.RUNNING
         db.session.add(r)
 
+        # Queue up another run on this build. The project is sync, but the
+        # runs in a single build can go in parallel
+        r = Run(b, 'p1r1a')
+        r.host_tag = 'aarch96'
+        db.session.add(r)
+
         # now queue a build up
         b = Build.create(p)
         r = Run(b, 'p1r2')
@@ -232,13 +238,25 @@ class WorkerAPITest(JobServTest):
             ('Authorization', 'Token key'),
         ]
         qs = 'available_runners=1&foo=2'
+
+        # This should make the p1r1a run running
         resp = self.client.get(
             '/workers/w1/', headers=headers, query_string=qs)
         self.assertEqual(200, resp.status_code, resp.data)
         data = json.loads(resp.data.decode())
         self.assertEqual(1, len(data['data']['worker']['run-defs']))
         self.assertEqual(
-            [BuildStatus.RUNNING, BuildStatus.QUEUED, BuildStatus.RUNNING],
+            [BuildStatus.RUNNING, BuildStatus.RUNNING, BuildStatus.QUEUED, BuildStatus.QUEUED], # NOQA
+            [x.status for x in Run.query])
+
+        # now job-1 should get blocked and job-2's run will get popped
+        resp = self.client.get(
+            '/workers/w1/', headers=headers, query_string=qs)
+        self.assertEqual(200, resp.status_code, resp.data)
+        data = json.loads(resp.data.decode())
+        self.assertEqual(1, len(data['data']['worker']['run-defs']))
+        self.assertEqual(
+            [BuildStatus.RUNNING, BuildStatus.RUNNING, BuildStatus.QUEUED, BuildStatus.RUNNING], # NOQA
             [x.status for x in Run.query])
 
     @patch('jobserv.api.worker.Storage')

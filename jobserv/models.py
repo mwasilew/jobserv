@@ -458,45 +458,62 @@ class Run(db.Model, StatusMixin):
         cursor = conn.cursor()
 
         rows = cursor.execute('''
-            SELECT runs.id FROM runs
+            SELECT
+              runs.id, runs.build_id, runs._status,
+              projects.id, projects.synchronous_builds
+            FROM runs
             JOIN builds on builds.id = runs.build_id
             JOIN projects on projects.id = builds.proj_id
             WHERE
-                runs._status = 1
+                runs._status in (1, 2)
               AND ({tags})
-              AND
-                projects.id NOT IN (
-                    SELECT projects.id
-                    FROM projects
-                    JOIN builds ON projects.id = builds.proj_id
-                    JOIN runs on runs.build_id = builds.id
-                    WHERE
-                        runs._status = 2 AND projects.synchronous_builds = true
-                    GROUP BY
-                        projects.id, projects.name, projects.synchronous_builds
-                )
-              ORDER BY runs.queue_priority DESC, runs.build_id, runs.id ASC
-              LIMIT 1
+              ORDER BY
+                runs._status DESC, runs.queue_priority DESC,
+                runs.build_id ASC, runs.id ASC
             '''.format(tags=tags))
-        if rows:
-            # We have a suitable run
-            rows = cursor.execute('''
-                UPDATE runs
-                SET
-                    -- A trick to allow us to find the ID of the row we updated
-                    id = @run_id := id,
-                    _status = 2,
-                    worker_name = "{worker}"
-                WHERE
-                    id = {run_id}
-                '''.format(worker=worker.name, run_id=cursor.fetchone()[0]))
+
+        # By ordering the query above by Run._status, we'll get the active
+        # runs first so that we can build up this list of build ids that are
+        # active for synchronous projects runs with these build ids are okay
+        # to schedule
+        sync_projects = {}
+        okay_sync_builds = {}
+        for (run_id, build_id, status, proj_id, sync) in cursor.fetchall():
+            if status == 2 and sync:
+                sync_projects[proj_id] = True
+                okay_sync_builds[build_id] = True
+            elif status == 1:
+                if not sync or \
+                        build_id in okay_sync_builds or \
+                        proj_id not in sync_projects:
+                    break
+        else:
+            # No run found to schedule
+            return
+
+        # We have a suitable run, try and schedule it. This check helps
+        # fight the race condition where two threads might schedule the same
+        # run to two different workers. The first worker will get the run,
+        # the second worker won't see a row change, and won't schedule anything
+        # This means the worker will have to check in again to find work
+        # (if any)
+        rows = cursor.execute('''
+            UPDATE runs
+            SET
+                -- A trick to allow us to find the ID of the row we updated
+                id = @run_id := id,
+                _status = 2,
+                worker_name = "{worker}"
+            WHERE
+                id = {run_id}
+            '''.format(worker=worker.name, run_id=run_id))
+        db.session.commit()
+        if rows == 1:
+            cursor.execute('select @run_id')
+            r = Run.query.get(cursor.fetchone()[0])
+            db.session.add(RunEvents(r, BuildStatus.RUNNING))
             db.session.commit()
-            if rows == 1:
-                cursor.execute('select @run_id')
-                r = Run.query.get(cursor.fetchone()[0])
-                db.session.add(RunEvents(r, BuildStatus.RUNNING))
-                db.session.commit()
-                return r
+            return r
 
 
 class RunEvents(db.Model, StatusMixin):
