@@ -13,8 +13,9 @@ blueprint = Blueprint('api_project', __name__, url_prefix='/projects')
 
 @blueprint.route('/', methods=('GET',))
 def project_list():
+    projects = permissions.projects_list().order_by(Project.name)
     return jsendify(
-        {'projects': [x.as_json() for x in permissions.projects_list()]})
+        {'projects': [x.as_json() for x in projects]})
 
 
 @blueprint.route('/', methods=('POST',))
