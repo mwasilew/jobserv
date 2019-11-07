@@ -4,7 +4,7 @@ HERE=$(dirname $(readlink -f $0))
 cd $HERE
 
 VENV=$(mktemp -d)
-trap "docker kill jobserv-db; rm -rf $VENV" EXIT
+trap "[ -z $MYSQL ] || docker kill jobserv-db; rm -rf $VENV" EXIT
 
 if [ -n "$MYSQL" ] ; then
 	echo "INFO: Using mysql database, test execution will be slower"
