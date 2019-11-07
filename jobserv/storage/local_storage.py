@@ -6,7 +6,7 @@ import os
 import mimetypes
 import shutil
 
-from flask import Blueprint, request, send_file, url_for
+from flask import Blueprint, make_response, request, send_file, url_for
 
 from jobserv.jsend import get_or_404
 from jobserv.models import Build, Project, Run
@@ -71,7 +71,7 @@ class Storage(BaseStorage):
             mt = mimetypes.guess_type(p)[0]
             return send_file(open(p, 'rb'), mimetype=mt)
         except FileNotFoundError:
-            return 'File not found', 404
+            return make_response('File not found', 404)
 
     def _generate_put_url(self, run, path, expiration, content_type):
         if not SIGNING_KEY:
