@@ -151,14 +151,14 @@ class WorkerAPITest(JobServTest):
 
         # now do a pattern match
         w.host_tags = 'aarch96'
-        r.host_tag = 'Aa?c*'
+        r.host_tag = 'aa_c%'
         r.status = BuildStatus.QUEUED
         db.session.commit()
         resp = self.client.get(
             '/workers/w1/', headers=headers, query_string=qs)
         self.assertEqual(200, resp.status_code)
         data = json.loads(resp.data.decode())
-        self.assertNotIn('run-defs', data['data']['worker'])
+        self.assertEqual(1, len(data['data']['worker']['run-defs']))
 
         # now mark it only for surges
         w.surges_only = True
