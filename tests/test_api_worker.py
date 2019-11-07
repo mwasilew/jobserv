@@ -5,7 +5,6 @@ import json
 import os
 import shutil
 import tempfile
-import unittest
 
 import jobserv.models
 from jobserv.models import Build, BuildStatus, Project, Run, Worker, db
@@ -98,7 +97,7 @@ class WorkerAPITest(JobServTest):
     @patch('jobserv.api.worker.Storage')
     def test_worker_get_run(self, storage):
         if db.engine.dialect.name == 'sqlite':
-            raise unittest.SkipTest('Test requires MySQL')
+            self.skipTest('Test requires MySQL')
         rundef = {
             'run_url': 'foo',
             'runner_url': 'foo',
@@ -183,7 +182,7 @@ class WorkerAPITest(JobServTest):
            rather than the *older* but blocked build from the first Project.
         """
         if db.engine.dialect.name == 'sqlite':
-            raise unittest.SkipTest('Test requires MySQL')
+            self.skipTest('Test requires MySQL')
         rundef = {
             'run_url': 'foo',
             'runner_url': 'foo',
@@ -271,7 +270,7 @@ class WorkerAPITest(JobServTest):
            3. Verify queue priority is done properly.
         """
         if db.engine.dialect.name == 'sqlite':
-            raise unittest.SkipTest('Test requires MySQL')
+            self.skipTest('Test requires MySQL')
         rundef = {
             'run_url': 'foo',
             'runner_url': 'foo',

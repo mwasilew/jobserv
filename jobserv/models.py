@@ -455,7 +455,7 @@ class Run(db.Model, StatusMixin):
         conn = db.session.connection().connection
         cursor = conn.cursor()
 
-        rows = cursor.execute('''
+        cursor.execute('''
             SELECT
               runs.id, runs.build_id, runs._status,
               projects.id, projects.synchronous_builds, runs.host_tag
@@ -476,7 +476,8 @@ class Run(db.Model, StatusMixin):
         # to schedule
         sync_projects = {}
         okay_sync_builds = {}
-        for (run_id, build_id, status, proj_id, sync, tag) in cursor.fetchall():
+        rows = cursor.fetchall()
+        for (run_id, build_id, status, proj_id, sync, tag) in rows:
             if status == 2 and sync:
                 sync_projects[proj_id] = True
                 okay_sync_builds[build_id] = True
