@@ -120,16 +120,7 @@ class ProjectDefinition(object):
             'host-tag': run.get('host-tag'),
         }
 
-        # We allow host-tag pattern matching using fnmatch type * and ?
-        # ie * matches everything and ? matches a single character.
-        # In sql we need * and ? to maps to % and _ respectively
-        # Since _ is a special character we need to escape that. And
-        # we also make all host-tags lowercase so we can be case-insensitve
-        #
-        # Soo... a pattern like: H?st_b* would become: h_st\_b%
-        # and would match stuff like host_b and hast_FOOO
-        rundef['host-tag'] = run['host-tag'].lower(
-        ).replace('*', '%').replace('_', '\_').replace('?', '_')
+        rundef['host-tag'] = run['host-tag'].lower()
         if 'script' in run:
             rundef['script'] = self.scripts[run['script']]
         else:

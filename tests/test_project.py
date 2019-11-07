@@ -237,8 +237,8 @@ class ProjectSchemaTest(JobServTest):
             run = trigger['runs'][0]
             rundef = proj.get_run_definition(dbrun, run, trigger, {}, {})
             data = json.loads(rundef)
-            self.assertEqual('aarch6%', data['host-tag'])
-            self.assertEqual('aarch6%', dbrun.host_tag)
+            self.assertEqual('aarch6*', data['host-tag'])
+            self.assertEqual('aarch6*', dbrun.host_tag)
 
     def test_host_tag_rundef_loopon(self):
         with open(os.path.join(self.examples, 'host-tag.yml')) as f:

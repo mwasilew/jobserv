@@ -5,6 +5,7 @@ import contextlib
 import datetime
 import enum
 import fcntl
+import fnmatch
 import json
 import logging
 import os
@@ -451,38 +452,40 @@ class Run(db.Model, StatusMixin):
         # Forcing 2 queries seems bad, but we have to JOIN on another table
         # and MySQL doesn't allow UPDATEs that do that.
         # So we first find a suitable Run:
-        tags = '`host_tag` like "%s"' % worker.name
-        for t in worker.host_tags.split(','):
-            tags += ' OR `host_tag` like "%s"' % t.strip()
         conn = db.session.connection().connection
         cursor = conn.cursor()
 
         rows = cursor.execute('''
             SELECT
               runs.id, runs.build_id, runs._status,
-              projects.id, projects.synchronous_builds
+              projects.id, projects.synchronous_builds, runs.host_tag
             FROM runs
             JOIN builds on builds.id = runs.build_id
             JOIN projects on projects.id = builds.proj_id
             WHERE
                 runs._status in (1, 2)
-              AND ({tags})
               ORDER BY
                 runs._status DESC, runs.queue_priority DESC,
                 runs.build_id ASC, runs.id ASC
-            '''.format(tags=tags))
+            ''')
 
+        tags = [worker.name] + [x.strip() for x in worker.host_tags.split(',')]
         # By ordering the query above by Run._status, we'll get the active
         # runs first so that we can build up this list of build ids that are
         # active for synchronous projects runs with these build ids are okay
         # to schedule
         sync_projects = {}
         okay_sync_builds = {}
-        for (run_id, build_id, status, proj_id, sync) in cursor.fetchall():
+        for (run_id, build_id, status, proj_id, sync, tag) in cursor.fetchall():
             if status == 2 and sync:
                 sync_projects[proj_id] = True
                 okay_sync_builds[build_id] = True
             elif status == 1:
+                for t in tags:
+                    if fnmatch.fnmatch(t, tag):
+                        break
+                else:
+                    continue
                 if not sync or \
                         build_id in okay_sync_builds or \
                         proj_id not in sync_projects:

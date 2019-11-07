@@ -151,7 +151,7 @@ class WorkerAPITest(JobServTest):
 
         # now do a pattern match
         w.host_tags = 'aarch96'
-        r.host_tag = 'aa_c%'
+        r.host_tag = 'aa?c*'
         r.status = BuildStatus.QUEUED
         db.session.commit()
         resp = self.client.get(
@@ -203,21 +203,21 @@ class WorkerAPITest(JobServTest):
 
         # add an active build
         b = Build.create(p)
-        r = Run(b, 'p1r1')
+        r = Run(b, 'p1b1r1')
         r.host_tag = 'aarch96'
         r.status = BuildStatus.RUNNING
         db.session.add(r)
 
         # Queue up another run on this build. The project is sync, but the
         # runs in a single build can go in parallel
-        r = Run(b, 'p1r1a')
+        r = Run(b, 'p1b1r2')
         r.host_tag = 'aarch96'
         db.session.add(r)
 
         # now queue a build up
         b = Build.create(p)
-        r = Run(b, 'p1r2')
-        r.host_tag = 'aarch96'
+        r = Run(b, 'p1b2r1')
+        r.host_tag = 'aarch97'  # different host-tag, but should be blocked
         db.session.add(r)
 
         # create a normal project
@@ -228,8 +228,8 @@ class WorkerAPITest(JobServTest):
         # queue up a build. This is "older" than the queued build for
         # the synchronous project, but should get selected below
         b = Build.create(p)
-        r = Run(b, 'p2r1')
-        r.host_tag = 'aarch96'
+        r = Run(b, 'p2b1r1')
+        r.host_tag = 'aarch97'
         db.session.add(r)
 
         db.session.commit()
@@ -239,7 +239,7 @@ class WorkerAPITest(JobServTest):
         ]
         qs = 'available_runners=1&foo=2'
 
-        # This should make the p1r1a run running
+        # This should make the p1b1r2 run running
         resp = self.client.get(
             '/workers/w1/', headers=headers, query_string=qs)
         self.assertEqual(200, resp.status_code, resp.data)
@@ -250,6 +250,9 @@ class WorkerAPITest(JobServTest):
             [x.status for x in Run.query])
 
         # now job-1 should get blocked and job-2's run will get popped
+        # lets change the host-tag to ensure this does *all* runs
+        w.host_tags = ['aarch97']
+        db.session.commit()
         resp = self.client.get(
             '/workers/w1/', headers=headers, query_string=qs)
         self.assertEqual(200, resp.status_code, resp.data)
