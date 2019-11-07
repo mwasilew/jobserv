@@ -74,8 +74,8 @@ class SimpleHandlerTest(TestCase):
         self.assertFalse(TestHandler.execute(self.wdir, self.rdir, None))
         self.assertEqual(
             'FAILED', TestHandler._jobserv.update_status.call_args[0][0])
-        self.assertEqual('Run cancelled from server',
-                         TestHandler._jobserv.update_status.call_args[0][1])
+        self.assertIn('Run cancelled from server',
+                      TestHandler._jobserv.update_status.call_args[0][1])
 
     def test_execute_success(self):
         """Ensure we do proper logging of a run that passes"""
