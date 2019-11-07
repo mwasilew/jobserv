@@ -1,0 +1,25 @@
+timeout: 5
+
+# params can get set globally
+params:
+  GLOBAL_PARAM: GLOBAL
+
+triggers:
+  - name: git
+    type: git_poller
+    # the can be set for all the runs in a trigger
+    params:
+      TRIGGER_PARAM: TRIGGER
+    runs:
+      - name: basic
+        container: alpine
+        host-tag: amd643
+        script: compile
+        # the can be set for a specific run
+        params:
+          RUN_PARAM: RUN
+
+scripts:
+  compile: |
+    #!/bin/sh -ex
+    echo "hello as nobody"
