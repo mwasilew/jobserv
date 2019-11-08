@@ -62,6 +62,11 @@ def assert_can_build(project):
     assert_internal_user()
 
 
+def assert_can_delete(project):
+    '''Is the requestor allowed to delete a project.'''
+    assert_internal_user()
+
+
 def _sign(url, headers, method):
     headers['X-Time'] = str(round(time.time()))
     msg = '%s,%s,%s' % (method, headers['X-Time'], url)

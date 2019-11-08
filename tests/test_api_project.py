@@ -60,6 +60,24 @@ class ProjectAPITest(JobServTest):
         p = Project.query.filter(Project.name == 'foo2').one()
         self.assertTrue(p.synchronous_builds)
 
+    def test_project_delete_denied(self):
+        self.create_projects('proj-1')
+        url = 'http://localhost/projects/proj-1/'
+        r = self.client.delete(url)
+        self.assertEqual(401, r.status_code)
+        self.assertEqual('X-JobServ-Sig not provided', r.json['message'])
+
+        headers = {'Content-type': 'application/json'}
+        _sign(url, headers, 'DELETE')
+        r = self.client.delete(url, headers=headers, data=json.dumps({}))
+        self.assertEqual(401, r.status_code, r.data)
+
+        headers = {'Content-type': 'application/json'}
+        _sign(url, headers, 'DELETE')
+        data = {'I_REALLY_MEAN_TO_DO_THIS': 'YES'}
+        r = self.client.delete(url, headers=headers, data=json.dumps(data))
+        self.assertEqual(200, r.status_code, r.data)
+
     def test_project_run_history(self):
         self.create_projects('proj-1')
         p = Project.query.all()[0]

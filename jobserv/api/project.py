@@ -34,6 +34,28 @@ def project_create():
     return jsendify({'url': url}, 201)
 
 
+@blueprint.route('/<project:proj>/', methods=('DELETE',))
+def project_delete(proj):
+    permissions.assert_can_delete(proj)
+
+    p = get_or_404(Project.query.filter_by(name=proj))
+
+    if request.get_json().get('I_REALLY_MEAN_TO_DO_THIS') != 'YES':
+        raise ApiError(401, 'Missing required parameter: "name"')
+
+    for t in p.triggers:
+        db.session.delete(t)
+    db.session.commit()
+
+    for b in p.builds:
+        db.session.delete(b)
+    db.session.commit()
+
+    db.session.delete(p)
+    db.session.commit()
+    return jsendify({'TODO': 'Delete storage artifacts'})
+
+
 @blueprint.route('/<project:proj>/', methods=('GET',))
 def project_get(proj):
     p = get_or_404(Project.query.filter_by(name=proj))
