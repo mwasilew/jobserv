@@ -504,17 +504,14 @@ class Run(db.Model, StatusMixin):
         rows = cursor.execute('''
             UPDATE runs
             SET
-                -- A trick to allow us to find the ID of the row we updated
-                id = @run_id := id,
-                _status = 2,
-                worker_name = "{worker}"
+                _status = 2
             WHERE
                 id = {run_id}
-            '''.format(worker=worker.name, run_id=run_id))
+            '''.format(run_id=run_id))
         db.session.commit()
         if rows == 1:
-            cursor.execute('select @run_id')
-            r = Run.query.get(cursor.fetchone()[0])
+            r = Run.query.get(run_id)
+            r.worker_name = worker.name
             db.session.add(RunEvents(r, BuildStatus.RUNNING))
             db.session.commit()
             return r
