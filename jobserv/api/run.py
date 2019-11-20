@@ -54,13 +54,13 @@ def run_get(proj, build_id, run):
 
 
 def _create_triggers(projdef, storage, build, params, secrets, triggers,
-                     parent_type):
+                     parent_type, queue_priority):
     for trigger in triggers:
         run_names = trigger.get('run-names')
         trigger = projdef.get_trigger(trigger['name'])
         trigger['run-names'] = run_names
-        trigger_runs(
-            storage, projdef, build, trigger, params, secrets, parent_type)
+        trigger_runs(storage, projdef, build, trigger, params, secrets,
+                     parent_type, queue_priority)
 
 
 def _handle_build_complete(projdef, storage, build, params, secrets, trigger):
@@ -79,10 +79,14 @@ def _handle_build_complete(projdef, storage, build, params, secrets, trigger):
         }
         triggers = trigger.get('triggers', [])
         if triggers:
+            # We need to guess what queue_priority we should use. They should
+            # all be the same based on the current architecture, so:
+            queue_priority = build.runs[0].queue_priority
             build_params = storage.get_build_params(build)
             params.update(build_params)
             _create_triggers(projdef, storage, build, params, secrets,
-                             trigger.get('triggers', []), trigger['type'])
+                             trigger.get('triggers', []), trigger['type'],
+                             queue_priority)
             db.session.flush()
             build.refresh_status()
 
@@ -105,7 +109,7 @@ def _handle_triggers(storage, run):
                 if run.status == BuildStatus.PASSED:
                     _create_triggers(projdef, storage, run.build, params,
                                      secrets, rt.get('triggers', []),
-                                     run_trigger['type'])
+                                     run_trigger['type'], run.queue_priority)
         if run.build.complete:
             _handle_build_complete(projdef, storage, run.build, params,
                                    secrets, run_trigger)

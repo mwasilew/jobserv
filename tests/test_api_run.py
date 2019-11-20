@@ -633,6 +633,7 @@ class RunAPITest(JobServTest):
         r = Run(self.build, 'run0')
         r.trigger = 'github'
         r.status = BuildStatus.RUNNING
+        r.queue_priority = 8675309
         db.session.add(r)
         db.session.commit()
 
@@ -648,3 +649,4 @@ class RunAPITest(JobServTest):
         self.assertEqual('QUEUED', run.status.name)
         rundef = json.loads(m.set_run_definition.call_args[0][1])
         self.assertEqual('42', rundef['env']['buildparam'])
+        self.assertEqual(8675309, run.queue_priority)
