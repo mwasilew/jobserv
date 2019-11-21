@@ -198,10 +198,14 @@ class RunAPITest(JobServTest):
         self._post(url, uploads, headers, 200)
 
     @patch('jobserv.api.run.Storage')
-    def test_run_complete_triggers(self, storage):
+    @patch('jobserv.api.run.notify_build_complete')
+    def test_run_complete_triggers(self, build_complete, storage):
         m = Mock()
         m.get_project_definition.return_value = json.dumps({
             'timeout': 5,
+            'email': {
+                'users': 'f@f.com',
+            },
             'triggers': [
                 {
                     'name': 'git',
@@ -249,6 +253,9 @@ class RunAPITest(JobServTest):
 
         rundef = json.loads(m.set_run_definition.call_args_list[0][0][1])
         self.assertEqual('git_poller', rundef['trigger_type'])
+
+        # Make sure we didn't send the email since the build isn't complete yet
+        self.assertEqual(0, build_complete.call_count)
 
     @patch('jobserv.api.run.Storage')
     def test_run_complete_triggers_type_upgrade(self, storage):

@@ -64,11 +64,6 @@ def _create_triggers(projdef, storage, build, params, secrets, triggers,
 
 
 def _handle_build_complete(projdef, storage, build, params, secrets, trigger):
-    email = trigger.get('email', projdef.project_email)
-    if email:
-        if build.status == BuildStatus.FAILED \
-                or not email.get('only_failures'):
-            notify_build_complete(build, email['users'])
     if build.status == BuildStatus.PASSED:
         # we don't want to pass "trigger params" since this is a build-level
         # trigger, but we do want the context of the build url, so
@@ -89,6 +84,13 @@ def _handle_build_complete(projdef, storage, build, params, secrets, trigger):
                              queue_priority)
             db.session.flush()
             build.refresh_status()
+            return  # Exit before we try and send email
+
+    email = trigger.get('email', projdef.project_email)
+    if email:
+        if build.status == BuildStatus.FAILED \
+                or not email.get('only_failures'):
+            notify_build_complete(build, email['users'])
 
 
 def _handle_triggers(storage, run):
@@ -110,6 +112,8 @@ def _handle_triggers(storage, run):
                     _create_triggers(projdef, storage, run.build, params,
                                      secrets, rt.get('triggers', []),
                                      run_trigger['type'], run.queue_priority)
+                    db.session.refresh(run.build)
+                    run.build.refresh_status()
         if run.build.complete:
             _handle_build_complete(projdef, storage, run.build, params,
                                    secrets, run_trigger)
