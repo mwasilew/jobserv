@@ -33,7 +33,7 @@ def build_create(proj):
                       d.get('queue-priority', 0))
     url = url_for('api_build.build_get',
                   proj=p.name, build_id=b.build_id, _external=True)
-    return jsendify({'url': url}, 201)
+    return jsendify({'url': url, 'build_id': b.build_id}, 201)
 
 
 @blueprint.route('/builds/<int:build_id>/', methods=('GET',))
