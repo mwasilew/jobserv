@@ -126,6 +126,18 @@ class BuildAPITest(JobServTest):
         self._post(self.urlbase, json.dumps(data), headers, 201)
         self.assertEqual({'foo': 'lava'}, trigger_build.call_args[0][4])
 
+        # try "optional" trigger type (when there is no "optional")
+        data = {'trigger-type': 'git-poller-optional'}
+        _sign('http://localhost/projects/proj-1/builds/', headers, 'POST')
+        self._post(self.urlbase, json.dumps(data), headers, 201)
+        self.assertEqual({}, trigger_build.call_args[0][4])
+
+        # try "optional" trigger type
+        data = {'trigger-type': 'lava-optional'}
+        _sign('http://localhost/projects/proj-1/builds/', headers, 'POST')
+        self._post(self.urlbase, json.dumps(data), headers, 201)
+        self.assertEqual({'foo': 'lava'}, trigger_build.call_args[0][4])
+
         # try override
         data = {'trigger-type': 'lava', 'secrets': {'foo': 'override'}}
         _sign('http://localhost/projects/proj-1/builds/', headers, 'POST')

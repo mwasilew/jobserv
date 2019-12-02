@@ -34,12 +34,16 @@ def build_create(proj):
     # "git-poller" trigger for the project.
     trigger_type = d.get('trigger-type')
     if trigger_type:
+        optional = trigger_type.endswith('-optional')
+        if optional:
+            trigger_type = trigger_type[:-9]  # strip off the "-optional"
         for t in p.triggers:
             if TriggerTypes(t.type).name == trigger_type:
                 secrets = t.secret_data
                 break
         else:
-            raise ApiError(400, 'No such trigger-type: %s' % trigger_type)
+            if not optional:
+                raise ApiError(400, 'No such trigger-type: %s' % trigger_type)
 
     # Check if the caller wants to inherit secrets from a specific trigger
     # definied for the project.
