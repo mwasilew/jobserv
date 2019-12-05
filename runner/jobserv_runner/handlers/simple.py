@@ -20,7 +20,7 @@ from jobserv_runner.cmd import stream_cmd
 from jobserv_runner.jobserv import JobServApi, RunCancelledError
 from jobserv_runner.logging import ContextLogger
 
-passed_msg = '''Runner has completed
+passed_msg = r'''Runner has completed
             _  _
            | \/ |
         \__|____|__/
@@ -33,7 +33,7 @@ passed_msg = '''Runner has completed
           | |  | |
           |_|  |_|
 '''
-failed_msg = '''Runner has completed
+failed_msg = r'''Runner has completed
           ________
           |  o  o|           Thumbs Down
           |___/\_|________
@@ -45,7 +45,7 @@ failed_msg = '''Runner has completed
           |_|  |_|
 '''
 # Courtesy of: http://patorjk.com/software/taag/#p=display&f=Doom&t=Rebooting
-reboot_msg = '''
+reboot_msg = r'''
    ______     _                 _   _               _   _   _
    | ___ \   | |               | | (_)             | | | | | |
    | |_/ /___| |__   ___   ___ | |_ _ _ __   __ _  | | | | | |
