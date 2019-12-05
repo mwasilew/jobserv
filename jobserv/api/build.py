@@ -8,7 +8,7 @@ from jobserv.storage import Storage
 from jobserv.jsend import (
     ApiError, get_or_404, jsendify, paginate, paginate_custom
 )
-from jobserv.models import Build, BuildStatus, Project, db
+from jobserv.models import Build, BuildStatus, Project, TriggerTypes, db
 from jobserv.trigger import trigger_build
 
 blueprint = Blueprint(
@@ -27,8 +27,38 @@ def build_create(proj):
     permissions.assert_can_build(proj)
     p = Project.query.filter(Project.name == proj).first_or_404()
     d = request.get_json() or {}
+
+    secrets = {}
+
+    # Check if the caller wants to inherit secrets from something like the
+    # "git-poller" trigger for the project.
+    trigger_type = d.get('trigger-type')
+    if trigger_type:
+        optional = trigger_type.endswith('-optional')
+        if optional:
+            trigger_type = trigger_type[:-9]  # strip off the "-optional"
+        for t in p.triggers:
+            if TriggerTypes(t.type).name == trigger_type:
+                secrets = t.secret_data
+                break
+        else:
+            if not optional:
+                raise ApiError(400, 'No such trigger-type: %s' % trigger_type)
+
+    # Check if the caller wants to inherit secrets from a specific trigger
+    # definied for the project.
+    trigger_id = d.get('trigger-id')
+    if trigger_id:
+        for t in p.triggers:
+            if t.id == trigger_id:
+                secrets = t.secret_data
+                break
+        else:
+            raise ApiError(400, 'Unknown trigger-id: %s' % trigger_id)
+
+    secrets.update(d.get('secrets') or {})
     b = trigger_build(p, d.get('reason'), d.get('trigger-name'),
-                      d.get('params'), d.get('secrets'),
+                      d.get('params'), secrets,
                       d.get('project-definition'),
                       d.get('queue-priority', 0))
     url = url_for('api_build.build_get',

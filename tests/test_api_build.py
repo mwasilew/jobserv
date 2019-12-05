@@ -6,7 +6,8 @@ import json
 from unittest.mock import patch
 
 from jobserv.permissions import _sign
-from jobserv.models import Build, BuildStatus, Project, Run, Test, db
+from jobserv.models import (
+    Build, BuildStatus, Project, ProjectTrigger, Run, Test, TriggerTypes, db)
 
 from tests import JobServTest
 
@@ -83,6 +84,71 @@ class BuildAPITest(JobServTest):
         self.assertEqual(500, r.status_code)
         data = json.loads(r.data.decode())
         self.assertEqual('error', data['status'])
+
+    @patch('jobserv.api.build.trigger_build')
+    def test_build_trigger_simple(self, trigger_build):
+        """Assert we can trigger a minimal build."""
+        trigger_build.return_value.build_id = 1
+        headers = {'Content-type': 'application/json'}
+        data = {}
+        _sign('http://localhost/projects/proj-1/builds/', headers, 'POST')
+        self._post(self.urlbase, json.dumps(data), headers, 201)
+        self.assertEqual({}, trigger_build.call_args[0][4])
+
+        trigger_build.reset_mock()
+        data = {'secrets': {'foo': 'bar'}}
+        self._post(self.urlbase, json.dumps(data), headers, 201)
+        self.assertEqual(data['secrets'], trigger_build.call_args[0][4])
+
+    @patch('jobserv.api.build.trigger_build')
+    def test_build_trigger_with_secrets(self, trigger_build):
+        """Assert we honor the trigger-type and trigger-id params."""
+        # create two triggers to choose from
+        trigger_build.return_value.build_id = 1
+        pt = ProjectTrigger('user', TriggerTypes.simple.value, self.project,
+                            None, None, {'foo': 'simple'})
+        db.session.add(pt)
+        pt = ProjectTrigger('user', TriggerTypes.lava.value, self.project,
+                            None, None, {'foo': 'lava'})
+        db.session.add(pt)
+        db.session.commit()
+
+        # try first trigger type
+        headers = {'Content-type': 'application/json'}
+        data = {'trigger-type': 'simple'}
+        _sign('http://localhost/projects/proj-1/builds/', headers, 'POST')
+        self._post(self.urlbase, json.dumps(data), headers, 201)
+        self.assertEqual({'foo': 'simple'}, trigger_build.call_args[0][4])
+
+        # try second trigger type
+        data = {'trigger-type': 'lava'}
+        _sign('http://localhost/projects/proj-1/builds/', headers, 'POST')
+        self._post(self.urlbase, json.dumps(data), headers, 201)
+        self.assertEqual({'foo': 'lava'}, trigger_build.call_args[0][4])
+
+        # try "optional" trigger type (when there is no "optional")
+        data = {'trigger-type': 'git-poller-optional'}
+        _sign('http://localhost/projects/proj-1/builds/', headers, 'POST')
+        self._post(self.urlbase, json.dumps(data), headers, 201)
+        self.assertEqual({}, trigger_build.call_args[0][4])
+
+        # try "optional" trigger type
+        data = {'trigger-type': 'lava-optional'}
+        _sign('http://localhost/projects/proj-1/builds/', headers, 'POST')
+        self._post(self.urlbase, json.dumps(data), headers, 201)
+        self.assertEqual({'foo': 'lava'}, trigger_build.call_args[0][4])
+
+        # try override
+        data = {'trigger-type': 'lava', 'secrets': {'foo': 'override'}}
+        _sign('http://localhost/projects/proj-1/builds/', headers, 'POST')
+        self._post(self.urlbase, json.dumps(data), headers, 201)
+        self.assertEqual({'foo': 'override'}, trigger_build.call_args[0][4])
+
+        # try by trigger-id
+        data = {'trigger-id': 1}
+        _sign('http://localhost/projects/proj-1/builds/', headers, 'POST')
+        self._post(self.urlbase, json.dumps(data), headers, 201)
+        self.assertEqual({'foo': 'simple'}, trigger_build.call_args[0][4])
 
     @patch('jobserv.api.build.Storage')
     def test_promote_list_empty(self, storage):
