@@ -7,13 +7,14 @@ import subprocess
 import time
 
 
-def _cmd_output(cmd, cwd=None):
+def _cmd_output(cmd, cwd=None, env=None):
     '''Simple non-blocking way to stream the output of a command'''
     poller = select.poll()
     p = subprocess.Popen(
         cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
         stdin=subprocess.DEVNULL,
-        cwd=cwd)
+        cwd=cwd,
+        env=env)
 
     fds = [p.stdout.fileno()]
     for fd in fds:
@@ -35,11 +36,11 @@ def _cmd_output(cmd, cwd=None):
         raise subprocess.CalledProcessError(p.returncode, cmd)
 
 
-def stream_cmd(stream_cb, cmd, cwd=None):
+def stream_cmd(stream_cb, cmd, cwd=None, env=None):
     last_update = 0
     last_buff = b''
     try:
-        for buff in _cmd_output(cmd, cwd):
+        for buff in _cmd_output(cmd, cwd, env):
             now = time.time()
             # stream data every 10s or if we have a 1k of data
             if now - last_update > 10 or len(buff) >= 1024:

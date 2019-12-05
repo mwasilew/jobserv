@@ -81,7 +81,7 @@ class JobServLogger(ContextLogger):
             # flag this so we know the stack trace was printed
             value.handler_logged = True
 
-    def exec(self, cmd_args, cwd=None):
+    def exec(self, cmd_args, cwd=None, env=None):
         buf = self.io.getvalue()
         if buf:
             # send any buffer data to server
@@ -95,7 +95,7 @@ class JobServLogger(ContextLogger):
                 return os.write(1, buff)
             return self.jobserv.update_run(buff)
         try:
-            stream_cmd(cb, cmd_args, cwd)
+            stream_cmd(cb, cmd_args, cwd, env)
             return True
         except subprocess.CalledProcessError as e:
             if e.output:

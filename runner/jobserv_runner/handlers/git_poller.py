@@ -83,7 +83,15 @@ class GitPoller(SimpleHandler):
             if not log.exec(['git', 'checkout', 'jobserv-run'], cwd=dst):
                 raise HandlerError('Unable to checkout: ' + sha)
             if SUPPORTS_SUBMODULE:
-                if not log.exec(['git', 'submodule', 'update'], cwd=dst):
+                # The env logic below is subtle: submodules might need
+                # credentials for other repos (say gitlab or github). The
+                # SimpleHandler class sets up a .netrc file in self.run_dir,
+                # so this will let git find the .netrc file and use it for
+                # this operation if needed.
+                env = os.environ.copy()
+                env['HOME'] = self.run_dir
+                if not log.exec(
+                        ['git', 'submodule', 'update'], cwd=dst, env=env):
                     raise HandlerError('Unable to update submodule(s)')
 
     def prepare_mounts(self):
