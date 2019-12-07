@@ -1,6 +1,7 @@
 # Copyright (C) 2017 Linaro Limited
 # Author: Andy Doan <andy.doan@linaro.org>
 
+import datetime
 import os
 import shutil
 import tempfile
@@ -9,10 +10,14 @@ import time
 import jobserv.models
 import jobserv.worker
 
-from jobserv.models import db, Build, Project, Run, Worker
+from unittest.mock import patch
+
+from jobserv.models import (
+    db, Build, BuildStatus, Project, Run, RunEvents, Worker)
 from jobserv.settings import SURGE_SUPPORT_RATIO
 from jobserv import worker as worker_module
-from jobserv.worker import _check_queue, _check_workers
+from jobserv.worker import (
+    _check_queue, _check_stuck, _check_workers, _check_cancelled)
 
 from tests import JobServTest
 
@@ -121,3 +126,45 @@ class TestWorkerMonitor(JobServTest):
         db.session.commit()
         _check_queue()
         self.assertTrue(os.path.exists(jobserv.worker.SURGE_FILE + '-armhf'))
+
+    @patch('jobserv.worker.notify_run_terminated')
+    def test_stuck(self, notify):
+        """Ensure stuck runs are failed."""
+        self.create_projects('proj1')
+        b = Build.create(Project.query.all()[0])
+        r = Run(b, 'bla')
+        r.status = BuildStatus.RUNNING
+        db.session.add(r)
+        db.session.commit()
+        e = RunEvents(r, BuildStatus.RUNNING)
+        e.time = datetime.datetime.utcnow() - datetime.timedelta(hours=13)
+        db.session.add(e)
+        db.session.commit()
+
+        _check_stuck()
+        self.assertEqual('bla', notify.call_args[0][0].name)
+        notify.rest_mock()
+
+        r.status = BuildStatus.CANCELLING
+        e = RunEvents(r, BuildStatus.RUNNING)
+        e.time = datetime.datetime.utcnow() - datetime.timedelta(hours=13)
+        db.session.add(e)
+        db.session.commit()
+
+        _check_stuck()
+        self.assertEqual('bla', notify.call_args[0][0].name)
+
+    @patch('jobserv.worker._update_run')
+    def test_cancelled(self, update):
+        """Ensure runs that were cancelled before they were assigned to a
+           worker are failed."""
+        self.create_projects('proj1')
+        b = Build.create(Project.query.all()[0])
+        r = Run(b, 'bla')
+        r.status = BuildStatus.CANCELLING
+        db.session.add(r)
+        db.session.commit()
+
+        _check_cancelled()
+
+        self.assertEqual('FAILED', update.call_args[1]['status'])

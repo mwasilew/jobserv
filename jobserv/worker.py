@@ -175,7 +175,8 @@ def _update_run(run, status, message):
 
 def _check_stuck():
     cut_off = datetime.datetime.utcnow() - datetime.timedelta(hours=12)
-    for r in Run.query.filter(Run.status == BuildStatus.RUNNING):
+    for r in Run.query.filter(
+            Run.status.in_((BuildStatus.RUNNING, BuildStatus.CANCELLING))):
         if len(r.status_events) > 0 and r.status_events[-1].time < cut_off:
             period = cut_off - r.status_events[-1].time
             log.error('Found stuck run %s/%s/%s on worker %s',
@@ -188,6 +189,17 @@ def _check_stuck():
             notify_run_terminated(r, period)
 
 
+def _check_cancelled():
+    """Find runs that were cancelled and have no worker assigned."""
+    qs = Run.query.filter(
+        Run.status == BuildStatus.CANCELLING, Run.worker == None)  # NOQA
+    for run in qs:
+        log.error('Failing cancelled run: %s/%s/%s',
+                  run.build.project.name, run.build.build_id, run.name)
+        m = '\n' + '=' * 72 + '\n' + 'CANCELLED\n'
+        _update_run(run, status=BuildStatus.FAILED.name, message=m)
+
+
 def run_monitor_workers():
     log.info('worker monitor has started')
     try:
@@ -198,6 +210,8 @@ def run_monitor_workers():
             _check_queue()
             log.debug('checking stuck jobs')
             _check_stuck()
+            log.debug('checking cancelled jobs')
+            _check_cancelled()
             time.sleep(120)  # run every 2 minutes
     except Exception:
         log.exception('unexpected error in run_monitor_workers')
