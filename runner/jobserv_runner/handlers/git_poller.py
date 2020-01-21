@@ -69,9 +69,7 @@ class GitPoller(SimpleHandler):
             args.extend(['-c', 'http.extraheader=' + header])
         if SUPPORTS_SUBMODULE:
             log.info('Git install supports submodules')
-            args.extend(['clone', '--recursive', clone_url, dst])
-        else:
-            args.extend(['clone', clone_url, dst])
+        args.extend(['clone', clone_url, dst])
         if not log.exec(args):
             raise HandlerError('Unable to clone: ' + clone_url)
 
@@ -90,6 +88,10 @@ class GitPoller(SimpleHandler):
                 # this operation if needed.
                 env = os.environ.copy()
                 env['HOME'] = self.run_dir
+                if not log.exec(
+                        ['git', 'submodule', 'init'], cwd=dst, env=env):
+                    raise HandlerError('Unable to init submodule(s)')
+
                 if not log.exec(
                         ['git', 'submodule', 'update'], cwd=dst, env=env):
                     raise HandlerError('Unable to update submodule(s)')
