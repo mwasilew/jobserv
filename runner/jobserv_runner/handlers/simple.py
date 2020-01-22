@@ -272,6 +272,13 @@ class SimpleHandler(object):
                 f.write('machine %s\n' % urllib.parse.urlparse(url).netloc)
                 f.write('login %s\npassword %s\n' % (user, token))
 
+            token = (self.rundef.get('secrets') or {}).get('bitbuckettok')
+            if token:
+                log.info('Creating a bitbucket token entry')
+                user = self.rundef['secrets']['bitbucketuser']
+                f.write('machine bitbucket.org\n')
+                f.write('login %s\npassword %s\n' % (user, token))
+
         # NOTE: Curl (used by git) doesn't look at the $NETRC environment
         # for overriding the .netrc location. We have to assume the
         # container's $HOME is /root
