@@ -54,3 +54,16 @@ class JobServTest(TestCase):
             url = 'http://localhost' + url
         permissions._sign(url, headers, 'GET')
         return self.get_json(url, status_code, query_string, headers)
+
+    def patch_signed_json(self, url, data, status_code=200):
+        headers = {}
+        if not url.startswith('http://'):
+            # signed url handling requires complete url
+            url = 'http://localhost' + url
+        permissions._sign(url, headers, 'PATCH')
+        resp = self.client.patch(url, headers=headers, json=data)
+        if status_code != resp.status_code:
+            print('response text:', resp.data)
+        self.assertEqual(status_code, resp.status_code, resp.data)
+        data = json.loads(resp.data)
+        return data['data']

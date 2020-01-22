@@ -120,3 +120,16 @@ class ProjectAPITest(JobServTest):
 
         trigger = self.get_signed_json(url)[0]
         self.assertEqual([{'name': 'secret1'}], trigger['secrets'])
+
+        # now patch the secrets and make sure it works
+        data = {
+            'secrets': [
+                {'name': 'secret1', 'value': 'newval'},  # update one
+                {'name': 'secret2', 'value': 'hax0r'},  # add one
+            ]
+        }
+        self.patch_signed_json(url + str(trigger['id']) + '/', data)
+        p = Project.query.filter(Project.name == 'proj-1').one()
+        t = p.triggers[0]
+        self.assertEqual(t.secret_data['secret1'], 'newval')
+        self.assertEqual(t.secret_data['secret2'], 'hax0r')

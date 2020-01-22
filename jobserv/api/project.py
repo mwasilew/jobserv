@@ -130,3 +130,32 @@ def project_create_trigger(proj):
 
     db.session.commit()
     return jsendify({}, 201)
+
+
+@blueprint.route('/<project:proj>/triggers/<int:tid>/', methods=('PATCH',))
+def project_patch_trigger(proj, tid):
+    permissions.assert_can_build(proj)
+    trigger = get_or_404(ProjectTrigger.query.filter(ProjectTrigger.id == tid))
+    if trigger.project.name != proj:
+        # someone is trying to do something fishy
+        return jsendify({}, 404)
+
+    data = request.get_json() or {}
+    val = data.get('definition_file')
+    if val:
+        trigger.definition_file = val
+
+    val = data.get('definition_repo')
+    if val:
+        trigger.definition_repo = val
+
+    val = data.get('secrets')
+    if val:
+        # val is an array of {'name': <name>, 'value': <val>} dicts
+        # Convert into a dcit of {<name>: <vaue>, ...}
+        val_dict = {x['name']: x['value'] for x in val}
+        cur = trigger.secret_data
+        cur.update(val_dict)
+        trigger.update_secrets()
+    db.session.commit()
+    return jsendify({})
