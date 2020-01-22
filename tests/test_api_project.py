@@ -117,3 +117,6 @@ class ProjectAPITest(JobServTest):
         self.assertEqual(TriggerTypes.git_poller.value, t.type)
         self.assertEqual(data['owner'], t.user)
         self.assertEqual(data['secret1'], t.secret_data['secret1'])
+
+        trigger = self.get_signed_json(url)[0]
+        self.assertEqual([{'name': 'secret1'}], trigger['secrets'])
