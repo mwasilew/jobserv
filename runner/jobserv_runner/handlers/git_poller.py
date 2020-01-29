@@ -92,8 +92,8 @@ class GitPoller(SimpleHandler):
                         ['git', 'submodule', 'init'], cwd=dst, env=env):
                     raise HandlerError('Unable to init submodule(s)')
 
-                if not log.exec(
-                        ['git', 'submodule', 'update'], cwd=dst, env=env):
+                if not log.exec(['git', 'submodule', 'update', '--recursive'],
+                                cwd=dst, env=env):
                     raise HandlerError('Unable to update submodule(s)')
 
     def prepare_mounts(self):
