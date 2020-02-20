@@ -21,10 +21,7 @@ def _cmd_output(cmd, cwd=None, env=None):
         poller.register(fd, select.POLLIN)
 
     while len(fds) > 0:
-        events = poller.poll(0.1)
-        if not events and p.poll() is not None:
-            break
-        for fd, event in events:
+        for fd, event in poller.poll(1000):
             if event & select.POLLIN:
                 yield os.read(fd, 1024)
             elif event & select.POLLHUP:
