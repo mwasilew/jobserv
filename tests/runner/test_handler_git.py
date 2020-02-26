@@ -165,3 +165,34 @@ class GitPollerHandlerTest(TestCase):
         repo = os.path.join(self.tmpdir, 'run/repo')
         with open(os.path.join(repo, 'submod/file1.txt')) as f:
             self.assertEqual('content\ncontent\n', f.read())
+
+        nested_parent_src, nested_parent_sha = self._create_repo('nested-par')
+
+        # now add submodule (creating nested submodules)
+        subprocess.check_call(
+            ['git', 'submodule', 'add', repo_src], cwd=nested_parent_src)
+        subprocess.check_call(['git', 'add', '.'], cwd=nested_parent_src)
+        subprocess.check_call(['git', 'commit', '-m', 'addsub'],
+                              cwd=nested_parent_src)
+        nested_parent_sha = subprocess.check_output(
+            ['git', 'log', '-1', '--format=%H'],
+            cwd=nested_parent_src).decode().strip()
+
+        # trigger the clone
+        shutil.rmtree(self.handler.run_dir)
+        os.mkdir(self.handler.run_dir)
+        self.handler.rundef = {
+            'script': '',
+            'persistent-volumes': None,
+            'run_url': 'foo',
+            'env': {
+                'GIT_URL': nested_parent_src,
+                'GIT_SHA': nested_parent_sha,
+            }
+        }
+        self.handler.prepare_mounts()
+
+        with open(os.path.join(repo, 'repo-src/file1.txt')) as f:
+            self.assertEqual('content\ncontent\n', f.read())
+        with open(os.path.join(repo, 'repo-src/submod/file1.txt')) as f:
+            self.assertEqual('content\ncontent\n', f.read())

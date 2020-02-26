@@ -92,7 +92,8 @@ class GitPoller(SimpleHandler):
                         ['git', 'submodule', 'init'], cwd=dst, env=env):
                     raise HandlerError('Unable to init submodule(s)')
 
-                if not log.exec(['git', 'submodule', 'update', '--recursive'],
+                if not log.exec(['git', 'submodule', 'update',
+                                 '--init', '--recursive'],
                                 cwd=dst, env=env):
                     raise HandlerError('Unable to update submodule(s)')
 
