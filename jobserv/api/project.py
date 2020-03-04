@@ -116,7 +116,10 @@ def project_create_trigger(proj):
         raise ApiError(401, 'Missing parameter: type')
     ttype = TriggerTypes[ttype].value
 
-    owner = d.pop('owner')
+    try:
+        owner = d.pop('owner')
+    except KeyError:
+        owner = 'unknown-internal'
     if u:
         owner = str(u)
     dr = df = None
