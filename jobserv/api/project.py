@@ -129,7 +129,15 @@ def project_create_trigger(proj):
     except KeyError:
         pass
 
-    db.session.add(ProjectTrigger(owner, ttype, p, dr, df, d))
+    try:
+        secrets = d.pop('secrets')
+        # convert array of [{'name': <name>, 'value': <value>}, ...] dicts
+        # into dictionary of {<name>: <value>, ...}
+        secrets = {x['name']: x['value'] for x in secrets}
+    except KeyError:
+        secrets = d
+
+    db.session.add(ProjectTrigger(owner, ttype, p, dr, df, secrets))
 
     db.session.commit()
     return jsendify({}, 201)
