@@ -66,8 +66,11 @@ def _get_proj_def(trigger, owner, repo, sha, token):
         p = urlparse(trigger.definition_repo)
         url = p.scheme + '://' + p.netloc
         if url == 'https://github.com':
+            # Get the github owner/proj by removing the leading / and ".git"
+            # if its in the url.
+            ghproj = p.path[1:].replace('.git', '')
             url = 'https://raw.githubusercontent.com/%s/master/%s' % (
-                trigger.definition_repo, name)
+                ghproj, name)
         elif url in GITLAB_SERVERS:
             headers['PRIVATE-TOKEN'] = trigger.secret_data['gitlabtok']
             url = trigger.definition_repo.replace(
