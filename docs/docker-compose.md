@@ -40,7 +40,7 @@ Assuming a $JOBSERV_HOST is set to the instance you can register a host with:
 
 The worker is now ready, and you can have it manually check in with the JobServ
 by running "./jobserv_worker.py check" or just run it in a loop with
-"jobserv_worker.py loop".
+"./jobserv_worker.py loop".
 
 
 ## Setting up a Project
@@ -56,7 +56,7 @@ project could be:
     flask project add-trigger \
       -u doanac \
       -t git_poller \
-      -r https://github.com/linaro-technologies/jobserv \
+      -r https://github.com/foundriesio/jobserv \
       -f .jobserv.yml \
       home-poller
 ~~~

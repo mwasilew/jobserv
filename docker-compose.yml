@@ -48,6 +48,8 @@ services:
     # jobserv to actually do db migrations. Therefore, we wait on the jobserv
     # instead of mysql.
     command: "/srv/jobserv/wait-for -t 30 api:8000 -- flask monitor-workers"
+    tmpfs:
+      - /data/workers
     environment:
       SQLALCHEMY_DATABASE_URI_FMT: "mysql+pymysql://{db_user}:{db_pass}@db/jobserv"
       DB_USER: jobserv

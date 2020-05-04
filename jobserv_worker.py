@@ -39,6 +39,10 @@ logging.basicConfig(
 log = logging.getLogger('jobserv-worker')
 logging.getLogger('requests').setLevel(logging.WARNING)
 
+if "linux" not in sys.platform:
+    log.error('worker only supported on the linux platform')
+    sys.exit(1)
+
 FEATURE_NEW_LOOPER = config.getboolean(
     'jobserv', 'feature_new_looper', fallback=False)
 
