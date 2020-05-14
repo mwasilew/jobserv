@@ -148,7 +148,8 @@ class TestWorkerMonitor(JobServTest):
         self.assertTrue(os.path.exists(jobserv.worker.SURGE_FILE + '-armhf'))
 
     @patch('jobserv.worker.notify_run_terminated')
-    def test_stuck(self, notify):
+    @patch('jobserv.worker._update_run')
+    def test_stuck(self, update_run, notify):
         """Ensure stuck runs are failed."""
         self.create_projects('proj1')
         b = Build.create(Project.query.all()[0])
@@ -173,6 +174,7 @@ class TestWorkerMonitor(JobServTest):
 
         _check_stuck()
         self.assertEqual('bla', notify.call_args[0][0].name)
+        self.assertEqual('bla', update_run.call_args[0][0].name)
 
     @patch('jobserv.worker._update_run')
     def test_cancelled(self, update):
