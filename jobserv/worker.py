@@ -11,7 +11,7 @@ import requests
 from jobserv.models import db, BuildStatus, Run, Worker, WORKER_DIR
 from jobserv.sendmail import (
     notify_run_terminated, notify_surge_started, notify_surge_ended)
-from jobserv.settings import SURGE_SUPPORT_RATIO
+from jobserv.settings import SURGE_SUPPORT_RATIO, WORKER_ROTATE_PINGS_LOG
 from jobserv.stats import StatsClient
 
 SURGE_FILE = os.path.join(WORKER_DIR, 'enable_surge')
@@ -44,10 +44,14 @@ def _check_worker(w):
         # based on rough calculations a 1M file is about 9000 entries which is
         # about 2 days worth of information
         if st.st_size > (1024 * 1024):
-            # rotate log file
-            rotated = pings_log + '.%d' % now
-            log.info('rotating pings log to: %s', rotated)
-            os.rename(pings_log, rotated)
+            if WORKER_ROTATE_PINGS_LOG:
+                # rotate log file
+                rotated = pings_log + '.%d' % now
+                log.info('rotating pings log to: %s', rotated)
+                os.rename(pings_log, rotated)
+            else:
+                log.info('truncating the pings log')
+                os.unlink(pings_log)
 
             # the pings log won't exist now, so we need to touch an empty file
             # with the proper mtime so we won't mark it offline on the next run
