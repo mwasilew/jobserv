@@ -40,7 +40,7 @@ def _cmd_output(cmd, cwd=None, env=None):
                 poller.unregister(fd)
                 fds.remove(fd)
             else:
-                msg = '== %s: unexpected poll event\n' % (
+                msg = '== %s: unexpected poll event: %r\n' % (
                     datetime.datetime.utcnow(), event)
                 yield msg.encode()
     p.wait()
