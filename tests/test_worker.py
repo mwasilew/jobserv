@@ -48,7 +48,10 @@ class TestWorkerMonitor(JobServTest):
         db.session.refresh(self.worker)
         self.assertFalse(self.worker.online)
 
-    def test_rotate(self):
+    @patch('jobserv.worker.WORKER_ROTATE_PINGS_LOG')
+    def test_rotate(self, rotate):
+        # enable rotation
+        rotate.return_value = True
         # create a big file
         self.worker.ping()
         with open(self.worker.pings_log, 'a') as f:
@@ -57,6 +60,23 @@ class TestWorkerMonitor(JobServTest):
         self.assertEqual(0, os.stat(self.worker.pings_log).st_size)
         # there should be two files now
         self.assertEqual(2, len(
+            os.listdir(os.path.dirname(self.worker.pings_log))))
+
+        # we should still be online
+        db.session.refresh(self.worker)
+        self.assertTrue(self.worker.online)
+
+    def test_truncate(self):
+        # rotation is disabled by default:
+
+        # create a big file
+        self.worker.ping()
+        with open(self.worker.pings_log, 'a') as f:
+            f.write('1' * 1024 * 1024)
+        _check_workers()
+        self.assertEqual(0, os.stat(self.worker.pings_log).st_size)
+        # there should be two files now
+        self.assertEqual(1, len(
             os.listdir(os.path.dirname(self.worker.pings_log))))
 
         # we should still be online
@@ -128,7 +148,8 @@ class TestWorkerMonitor(JobServTest):
         self.assertTrue(os.path.exists(jobserv.worker.SURGE_FILE + '-armhf'))
 
     @patch('jobserv.worker.notify_run_terminated')
-    def test_stuck(self, notify):
+    @patch('jobserv.worker._update_run')
+    def test_stuck(self, update_run, notify):
         """Ensure stuck runs are failed."""
         self.create_projects('proj1')
         b = Build.create(Project.query.all()[0])
@@ -153,6 +174,7 @@ class TestWorkerMonitor(JobServTest):
 
         _check_stuck()
         self.assertEqual('bla', notify.call_args[0][0].name)
+        self.assertEqual('bla', update_run.call_args[0][0].name)
 
     @patch('jobserv.worker._update_run')
     def test_cancelled(self, update):
