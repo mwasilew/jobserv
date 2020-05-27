@@ -60,7 +60,7 @@ class BuildAPITest(JobServTest):
     @patch('jobserv.api.build.Storage')
     def test_build_get_definition(self, storage):
         Build.create(self.project)
-        storage().get_project_defintion.return_value = 'foo: bar'
+        storage().get_project_definition.return_value = 'foo: bar'
         r = self.client.get(self.urlbase + '1/project.yml')
         self.assertEqual(200, r.status_code, r.data)
         self.assertEqual('foo: bar', r.data.decode())

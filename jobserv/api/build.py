@@ -79,7 +79,7 @@ def build_get_project_definition(proj, build_id):
     p = get_or_404(Project.query.filter(Project.name == proj))
     b = get_or_404(
         Build.query.filter(Build.project == p, Build.build_id == build_id))
-    pd = Storage().get_project_defintion(b)
+    pd = Storage().get_project_definition(b)
     return pd, 200, {'Content-Type': 'text/yaml'}
 
 
