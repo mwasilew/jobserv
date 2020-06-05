@@ -1,5 +1,6 @@
 # Copyright (C) 2017 Linaro Limited
 # Author: Andy Doan <andy.doan@linaro.org>
+from math import ceil
 
 from flask import jsonify, request
 
@@ -51,18 +52,24 @@ def paginate_custom(item_type, query, cb_func):
         raise ApiError(400, 'Invalid pagination. "page" must be numeric')
     total = query.count()
     offset = page * limit
+    pages = ceil(total / limit)
+    next_page = page + 1
 
     items = query.limit(limit).offset(offset)
     data = {
+        'limit': limit,
+        'page': page,
+        'pages': pages,
         'total': total,
         item_type: [cb_func(x) for x in items],
     }
-    if (page + 1) * limit < total:
+    if next_page < pages:
         url = request.host_url
         if url[-1] == '/':
             url = url[:-1]
         url += request.path
-        data['next'] = '%s?page=%d&limit=%d' % (url, page + 1, limit)
+        data['next'] = f'{url}?page={next_page}&limit={limit}'
+
     return jsendify(data)
 
 
