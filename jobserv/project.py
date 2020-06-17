@@ -118,6 +118,7 @@ class ProjectDefinition(object):
             'test-grepping': run.get('test-grepping'),
             'persistent-volumes': run.get('persistent-volumes'),
             'host-tag': run.get('host-tag'),
+            'console-progress': run.get('console-progress'),
         }
 
         rundef['host-tag'] = run['host-tag'].lower()

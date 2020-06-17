@@ -272,6 +272,16 @@ def run_get_definition(proj, build_id, run):
     return rundef, 200, {'Content-Type': 'application/json'}
 
 
+@blueprint.route('/<run>/progress-regex', methods=('GET',))
+def run_get_progress_regex(proj, build_id, run):
+    r = _get_run(proj, build_id, run)
+    rundef = json.loads(Storage().get_run_definition(r))
+    progress = rundef.get('console-progress')
+    if progress:
+        return jsendify(progress)
+    raise ApiError(404, {'message': 'Run has not defined console-progress'})
+
+
 @blueprint.route('/<run>/.simulate.sh', methods=('GET',))
 def run_get_simulate_sh(proj, build_id, run):
     runner = url_for('api_worker.runner_download', _external=True)

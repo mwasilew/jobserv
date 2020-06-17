@@ -1,0 +1,18 @@
+timeout: 5
+triggers:
+  - name: git
+    type: git_poller
+    runs:
+      - name: progress-example
+        container: alpine
+        script: compile
+        console-progress:
+          progress-pattern: "^NOTE: Running task (?P<current>\\d+) of (?P<total>\\d+)"
+
+scripts:
+  compile: |
+    #!/bin/sh -ex
+    echo NOTE: Running task 1 of 4
+    echo NOTE: Running task 2 of 4
+    echo NOTE: Running task 3 of 4
+    echo NOTE: Running task 4 of 4

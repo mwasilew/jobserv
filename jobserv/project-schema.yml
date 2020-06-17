@@ -132,6 +132,13 @@ mapping:
                     mapping:
                       regex;(.*):
                         type: str
+                  console-progress:
+                    required: False
+                    type: map
+                    mapping:
+                      progress-pattern:
+                        type: str
+                        required: True
                   test-grepping:
                     required: False
                     type: map
