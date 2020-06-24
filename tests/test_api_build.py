@@ -66,12 +66,19 @@ class BuildAPITest(JobServTest):
         self.assertEqual('foo: bar', r.data.decode())
 
     def test_build_get_latest(self):
-        Build.create(self.project)
+        b1 = Build.create(self.project)
+        b1.trigger_name = 'test-trigger-qs'
+        b1.status = BuildStatus.PASSED
+        db.session.commit()
         b = Build.create(self.project)
         b.status = BuildStatus.PASSED
         Build.create(self.project)
         data = self.get_json(self.urlbase + 'latest/')['build']
         self.assertEqual(b.build_id, data['build_id'])
+
+        url = self.urlbase + 'latest/?trigger_name=test-trigger-qs'
+        data = self.get_json(url)['build']
+        self.assertEqual(b1.build_id, data['build_id'])
 
     def test_build_trigger_fails(self):
         # ensure we have a graceful failure when we are triggered

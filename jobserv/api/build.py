@@ -86,16 +86,16 @@ def build_get_project_definition(proj, build_id):
 @blueprint.route('/builds/latest/', methods=('GET',))
 def build_get_latest(proj):
     '''Return the most recent successful build'''
-    b = get_or_404(
-        Build.query.join(
+    qs = Build.query.join(
             Build.project
-        ).filter(
-            Project.name == proj,
-            Build.status == BuildStatus.PASSED,
-        ).order_by(
-            Build.id.desc()
-        )
+    ).filter(
+        Project.name == proj,
+        Build.status == BuildStatus.PASSED,
     )
+    trigger = request.args.get('trigger_name')
+    if trigger:
+        qs = qs.filter(Build.trigger_name == trigger)
+    b = get_or_404(qs.order_by(Build.id.desc()))
     return jsendify({'build': b.as_json(detailed=True)})
 
 
