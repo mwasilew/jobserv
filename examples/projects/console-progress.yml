@@ -6,6 +6,7 @@ triggers:
       - name: progress-example
         container: alpine
         script: compile
+        host-tag: foo
         console-progress:
           progress-pattern: "^NOTE: Running task (?P<current>\\d+) of (?P<total>\\d+)"
 
