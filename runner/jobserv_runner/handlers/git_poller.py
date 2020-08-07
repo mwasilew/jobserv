@@ -88,6 +88,13 @@ class GitPoller(SimpleHandler):
                 # this operation if needed.
                 env = os.environ.copy()
                 env['HOME'] = self.run_dir
+                # User's often point to private github repositories. User's
+                # normally use ssh+git because that works well locally. This
+                # doesn't work for us, but hopefully we have a githubtok
+                # present. This tells git to use https which will use the token
+                with open(os.path.join(self.run_dir, '.gitconfig'), 'w') as f:
+                    f.write('[url "https://github.com/"]\n')
+                    f.write('  insteadOf = "git@github.com:"\n')
                 if not log.exec(
                         ['git', 'submodule', 'init'], cwd=dst, env=env):
                     raise HandlerError('Unable to init submodule(s)')
