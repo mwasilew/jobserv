@@ -514,6 +514,7 @@ class Run(db.Model, StatusMixin):
             r = Run.query.get(run_id)
             r.worker_name = worker.name
             db.session.add(RunEvents(r, BuildStatus.RUNNING))
+            r.build.refresh_status()
             db.session.commit()
             return r
 
