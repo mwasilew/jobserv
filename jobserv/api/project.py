@@ -107,7 +107,7 @@ def project_trigger_list(proj):
 
 @blueprint.route('/<project:proj>/triggers/', methods=('POST',))
 def project_create_trigger(proj):
-    u = permissions.assert_internal_user()
+    u = permissions.assert_create_trigger(proj)
     p = get_or_404(Project.query.filter_by(name=proj))
 
     d = request.get_json() or {}

@@ -62,6 +62,11 @@ def assert_can_build(project):
     assert_internal_user()
 
 
+def assert_create_trigger(proj):
+    '''Is the requestor allowed to create triggers on a project.'''
+    return assert_internal_user()
+
+
 def assert_can_delete(project):
     '''Is the requestor allowed to delete a project.'''
     assert_internal_user()
