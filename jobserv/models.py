@@ -23,7 +23,8 @@ from flask_sqlalchemy import SQLAlchemy
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.hybrid import Comparator, hybrid_property
 
-from jobserv.settings import JOBS_DIR, SECRETS_FERNET_KEY, WORKER_DIR
+from jobserv.settings import (
+    BUILD_URL_FMT, JOBS_DIR, RUN_URL_FMT, SECRETS_FERNET_KEY, WORKER_DIR)
 from jobserv.stats import StatsClient
 
 db = SQLAlchemy()
@@ -283,6 +284,9 @@ class Build(db.Model, StatusMixin):
             'status': self.status.name,
             'runs': [x.as_json() for x in self.runs],
         }
+        if BUILD_URL_FMT:
+            data['web_url'] = BUILD_URL_FMT.format(
+                project=self.project.name, build=self.build_id)
         if self.name:
             data['name'] = self.name
         if self.trigger_name:
@@ -410,6 +414,9 @@ class Run(db.Model, StatusMixin):
             'status': self.status.name,
             'log_url': log,
         }
+        if RUN_URL_FMT:
+            data['web_url'] = RUN_URL_FMT.format(
+                project=p.name, build=b.build_id, run=self.name)
         if self.status_events:
             data['created'] = self.status_events[0].time
             if self.complete:

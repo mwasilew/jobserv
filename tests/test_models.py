@@ -63,6 +63,17 @@ class BuildTest(JobServTest):
             db.session.add(Build(self.proj, 1))
             db.session.commit()
 
+    def test_as_json(self):
+        import jobserv.models
+        orig = jobserv.models.BUILD_URL_FMT
+        try:
+            jobserv.models.BUILD_URL_FMT = 'foo {build} | {project}'
+            b = Build.create(self.proj)
+            data = b.as_json()
+            self.assertEqual('foo 1 | job-1', data['web_url'])
+        finally:
+            jobserv.models.BUILD_URL_FMT = orig
+
     def test_create_build(self):
         b = Build.create(self.proj)
         self.assertEqual(1, b.build_id)
@@ -166,6 +177,21 @@ class RunTest(JobServTest):
         db.session.add(Run(self.build, 'name'))
         with self.assertRaises(IntegrityError):
             db.session.commit()
+
+    def test_as_json(self):
+        import jobserv.models
+        orig = jobserv.models.RUN_URL_FMT
+        r = Run(self.build, 'name1')
+        db.session.add(r)
+        db.session.commit()
+        try:
+            jobserv.models.RUN_URL_FMT = 'bar {build} | {run} | {project}'
+            b = Build.create(self.proj)
+            data = r.as_json()
+            self.assertEqual('bar 1 | name1 | job-1', data['web_url'])
+        finally:
+            jobserv.models.BUILD_URL_FMT = orig
+
 
     def test_build_status_queued(self):
         db.session.add(Run(self.build, 'name1'))
