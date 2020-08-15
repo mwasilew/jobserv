@@ -1,16 +1,18 @@
 # Copyright (C) 2017 Linaro Limited
 # Author: Andy Doan <andy.doan@linaro.org>
 
+from base64 import b64encode
 import os
+from shutil import which
+import subprocess
 
 import requests
-
-from base64 import b64encode
 
 from jobserv_runner.handlers.simple import HandlerError, SimpleHandler
 
 SUPPORTS_SUBMODULE = os.path.exists('/usr/libexec/git-core/git-submodule') or \
                      os.path.exists('/usr/lib/git-core/git-submodule')
+SUPPORTS_LFS = which('git-lfs') is not None
 
 
 def b64(val):
@@ -18,6 +20,9 @@ def b64(val):
 
 
 class GitPoller(SimpleHandler):
+    def _lfs_initialize(self, env):
+        subprocess.check_call(['git', 'lfs', 'install'], env=env)
+
     def _needs_auth(self, repo_url):
         if not repo_url.endswith('.git'):
             repo_url += '.git'
@@ -69,6 +74,10 @@ class GitPoller(SimpleHandler):
             args.extend(['-c', 'http.extraheader=' + header])
         if SUPPORTS_SUBMODULE:
             log.info('Git install supports submodules')
+        if SUPPORTS_LFS:
+            log.info('Git install supports LFS')
+            self._lfs_initialize(None)
+
         args.extend(['clone', clone_url, dst])
         if not log.exec(args):
             raise HandlerError('Unable to clone: ' + clone_url)
@@ -95,6 +104,8 @@ class GitPoller(SimpleHandler):
                 with open(os.path.join(self.run_dir, '.gitconfig'), 'w') as f:
                     f.write('[url "https://github.com/"]\n')
                     f.write('  insteadOf = "git@github.com:"\n')
+                if SUPPORTS_LFS:
+                    self._lfs_initialize(env)
                 if not log.exec(
                         ['git', 'submodule', 'init'], cwd=dst, env=env):
                     raise HandlerError('Unable to init submodule(s)')
