@@ -186,12 +186,11 @@ class RunTest(JobServTest):
         db.session.commit()
         try:
             jobserv.models.RUN_URL_FMT = 'bar {build} | {run} | {project}'
-            b = Build.create(self.proj)
+            Build.create(self.proj)
             data = r.as_json()
             self.assertEqual('bar 1 | name1 | job-1', data['web_url'])
         finally:
             jobserv.models.BUILD_URL_FMT = orig
-
 
     def test_build_status_queued(self):
         db.session.add(Run(self.build, 'name1'))
