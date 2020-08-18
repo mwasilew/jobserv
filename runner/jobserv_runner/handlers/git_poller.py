@@ -45,6 +45,7 @@ class GitPoller(SimpleHandler):
             log.info('Adding githubtok to .gitconfig')
             fd.write('[http "https://github.com"]\n')
             fd.write('  extraheader = Authorization: Basic ' + b64(tok) + '\n')
+        return tok is not None
 
     def _create_gitlab_content(self, log, fd, secrets, clone_url):
         # we can't determine by URL if its a gitlab repo, so just assume
@@ -71,11 +72,17 @@ class GitPoller(SimpleHandler):
         secrets = self.rundef.get('secrets') or {}
 
         with open(gitconfig, 'w') as f:
-            self._create_github_content(log, f, secrets)
+            gh = self._create_github_content(log, f, secrets)
             self._create_gitlab_content(log, f, secrets, clone_url)
 
+            # We have to be careful with the extraheader below. Its used in 2
+            # different ways:
+            # 1) The clone_url repo requires this header.
+            # 2) The git_poller needed it (for reading project definition)
+            # In the case of 2, we *don't* want to incude this in .gitconfig
+            gh = gh and clone_url.startswith('https://github.com')
             header = secrets.get('git.http.extraheader')
-            if header:
+            if not gh and header:
                 log.info('Adding git.http.extraheader to .gitconfig')
                 f.write('[http "%s"]\n' % clone_url)
                 f.write('  extraheader = ' + header + '\n')
