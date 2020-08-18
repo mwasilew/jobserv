@@ -32,7 +32,33 @@ class GitPoller(SimpleHandler):
         resp = requests.get(repo_url)
         return resp.status_code != 200
 
-    def _get_http_header(self, log, clone_url):
+    def _create_github_content(self, log, fd, secrets):
+        # User's often point to private github repositories. User's
+        # normally use ssh+git because that works well locally. This
+        # doesn't work for us, but hopefully we have a githubtok
+        # present. This tells git to use https which will use the token
+        fd.write('[url "https://github.com/"]\n')
+        fd.write('  insteadOf = "git@github.com:"\n')
+
+        tok = secrets.get('githubtok')
+        if tok:
+            log.info('Adding githubtok to .gitconfig')
+            fd.write('[http "https://github.com"]\n')
+            fd.write('  extraheader = Authorization: Basic ' + b64(tok) + '\n')
+
+    def _create_gitlab_content(self, log, fd, secrets, clone_url):
+        # we can't determine by URL if its a gitlab repo, so just assume
+        # the rundef/secrets are done sanely by the user
+        env = self.rundef['env']
+        user = env.get('gitlabuser') or secrets.get('gitlabuser')
+        if user:
+            log.info('Adding gitlabtok to .gitconfig')
+            token = self.rundef['secrets']['gitlabtok']
+            fd.write('[http "%s"]\n' % clone_url)
+            fd.write('  extraheader = Authorization: Basic ')
+            fd.write(b64(user + ':' + token) + '\n')
+
+    def _create_gitconfig(self, log, clone_url, gitconfig):
         # Its hard to know if the clone_url needs authentication or not. The
         # github, gitlab, or git.http.extraheader secrets *could* be for
         # secondary repositories used in the actual CI script. This is a simple
@@ -41,45 +67,41 @@ class GitPoller(SimpleHandler):
         log.info('Checking to see if %s requires authentication.', clone_url)
         if not self._needs_auth(clone_url):
             log.info('Server does not appear to need credentials for cloning')
-            return
-        secrets = self.rundef.get('secrets', {})
-        if clone_url.startswith('https://github.com'):
-            tok = secrets.get('githubtok')
-            if tok:
-                log.info('Using github secret to clone repo')
-                return 'Authorization: Basic ' + b64(tok)
 
-        # we can't determine by URL if its a gitlab repo, so just assume
-        # the rundef/secrets are done sanely by the user
-        env = self.rundef['env']
-        user = env.get('gitlabuser') or secrets.get('gitlabuser')
-        if user:
-            log.info('Using gitlab secret to clone repo')
-            token = self.rundef['secrets']['gitlabtok']
-            return 'Authorization: Basic ' + b64(user + ':' + token)
+        secrets = self.rundef.get('secrets') or {}
 
-        secrets = self.rundef.get('secrets', {})
-        header = secrets.get('git.http.extraheader')
-        if header:
-            log.info('Using git.http.extraheader to clone repo')
-        return header
+        with open(gitconfig, 'w') as f:
+            self._create_github_content(log, f, secrets)
+            self._create_gitlab_content(log, f, secrets, clone_url)
+
+            header = secrets.get('git.http.extraheader')
+            if header:
+                log.info('Adding git.http.extraheader to .gitconfig')
+                f.write('[http "%s"]\n' % clone_url)
+                f.write('  extraheader = ' + header + '\n')
 
     def _clone(self, log, dst):
         clone_url = self.rundef['env']['GIT_URL']
         log.info('Clone_url: %s', clone_url)
 
-        args = ['git']
-        header = self._get_http_header(log, clone_url)
-        if header:
-            args.extend(['-c', 'http.extraheader=' + header])
+        gitconfig = os.path.join(self.run_dir, '.gitconfig')
+        self._create_gitconfig(log, clone_url, gitconfig)
+        # The env logic below is subtle: submodules might need
+        # credentials for other repos (say gitlab or github). The
+        # SimpleHandler class sets up a .netrc file in self.run_dir,
+        # so this will let git find the .netrc file and use it for
+        # this operation if needed. This also allows git to see the
+        # .gitconfig file we create
+        env = os.environ.copy()
+        env['HOME'] = self.run_dir
+
         if SUPPORTS_SUBMODULE:
             log.info('Git install supports submodules')
         if SUPPORTS_LFS:
             log.info('Git install supports LFS')
-            self._lfs_initialize(None)
+            self._lfs_initialize(env)
 
-        args.extend(['clone', clone_url, dst])
-        if not log.exec(args):
+        if not log.exec(['git', 'clone', clone_url, dst], env=env):
             raise HandlerError('Unable to clone: ' + clone_url)
 
         sha = self.rundef['env'].get('GIT_SHA')
@@ -90,22 +112,6 @@ class GitPoller(SimpleHandler):
             if not log.exec(['git', 'checkout', 'jobserv-run'], cwd=dst):
                 raise HandlerError('Unable to checkout: ' + sha)
             if SUPPORTS_SUBMODULE:
-                # The env logic below is subtle: submodules might need
-                # credentials for other repos (say gitlab or github). The
-                # SimpleHandler class sets up a .netrc file in self.run_dir,
-                # so this will let git find the .netrc file and use it for
-                # this operation if needed.
-                env = os.environ.copy()
-                env['HOME'] = self.run_dir
-                # User's often point to private github repositories. User's
-                # normally use ssh+git because that works well locally. This
-                # doesn't work for us, but hopefully we have a githubtok
-                # present. This tells git to use https which will use the token
-                with open(os.path.join(self.run_dir, '.gitconfig'), 'w') as f:
-                    f.write('[url "https://github.com/"]\n')
-                    f.write('  insteadOf = "git@github.com:"\n')
-                if SUPPORTS_LFS:
-                    self._lfs_initialize(env)
                 if not log.exec(
                         ['git', 'submodule', 'init'], cwd=dst, env=env):
                     raise HandlerError('Unable to init submodule(s)')

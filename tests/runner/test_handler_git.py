@@ -114,9 +114,12 @@ class GitPollerHandlerTest(TestCase):
                 'githubtok': 'ThisIsTestGitHubToken',
             }
         }
-        header = self.handler._get_http_header(mock.Mock(), clone_url)
-        self.assertEqual(
-            'Authorization: Basic VGhpc0lzVGVzdEdpdEh1YlRva2Vu', header)
+        gitconfig = os.path.join(self.handler.run_dir, '.gitconfig')
+        self.handler._create_gitconfig(mock.Mock(), clone_url, gitconfig)
+        with open(gitconfig) as f:
+            content = f.read()
+            self.assertIn(
+                'Authorization: Basic VGhpc0lzVGVzdEdpdEh1YlRva2Vu', content)
 
     def test_private_gitlab(self):
         clone_url = 'https://git.com/nosuchorog/nosuchrepo'
@@ -133,9 +136,12 @@ class GitPollerHandlerTest(TestCase):
                 'gitlabtok': 'ThisIsTestGitLab',
             }
         }
-        header = self.handler._get_http_header(mock.Mock(), clone_url)
-        self.assertEqual(
-            'Authorization: Basic Zm9vOlRoaXNJc1Rlc3RHaXRMYWI=', header)
+        gitconfig = os.path.join(self.handler.run_dir, '.gitconfig')
+        self.handler._create_gitconfig(mock.Mock(), clone_url, gitconfig)
+        with open(gitconfig) as f:
+            content = f.read()
+            self.assertIn(
+                'Authorization: Basic Zm9vOlRoaXNJc1Rlc3RHaXRMYWI=', content)
 
     def test_git_submodules(self):
         """Ensure that we pull in the proper git submodules"""
