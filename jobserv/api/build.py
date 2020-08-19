@@ -24,7 +24,7 @@ def build_list(proj):
 
 @blueprint.route('/builds/', methods=('POST',))
 def build_create(proj):
-    permissions.assert_can_build(proj)
+    u = permissions.assert_can_build(proj)
     p = Project.query.filter(Project.name == proj).first_or_404()
     d = request.get_json() or {}
 
@@ -57,6 +57,8 @@ def build_create(proj):
             raise ApiError(400, 'Unknown trigger-id: %s' % trigger_id)
 
     secrets.update(d.get('secrets') or {})
+    if u:
+        secrets['triggered-by'] = str(u)
     b = trigger_build(p, d.get('reason'), d.get('trigger-name'),
                       d.get('params'), secrets,
                       d.get('project-definition'),
