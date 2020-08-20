@@ -4,6 +4,7 @@
 from flask import Blueprint, request, url_for
 
 from jobserv.flask import permissions
+from jobserv.settings import BUILD_URL_FMT
 from jobserv.storage import Storage
 from jobserv.jsend import (
     ApiError, get_or_404, jsendify, paginate, paginate_custom
@@ -65,7 +66,12 @@ def build_create(proj):
                       d.get('queue-priority', 0))
     url = url_for('api_build.build_get',
                   proj=p.name, build_id=b.build_id, _external=True)
-    return jsendify({'url': url, 'build_id': b.build_id}, 201)
+    weburl = None
+    if BUILD_URL_FMT:
+        weburl = BUILD_URL_FMT.format(
+            project=b.project.name, build=b.build_id)
+    return jsendify(
+        {'url': url, 'build_id': b.build_id, 'web_url': weburl}, 201)
 
 
 @blueprint.route('/builds/<int:build_id>/', methods=('GET',))
