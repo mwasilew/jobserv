@@ -58,6 +58,9 @@ def build_create(proj):
             raise ApiError(400, 'Unknown trigger-id: %s' % trigger_id)
 
     secrets.update(d.get('secrets') or {})
+    if 'triggered-by' in secrets:
+        # Let's not allow triggered-by to be set externally.
+        del secrets['triggered-by']
     if u:
         secrets['triggered-by'] = str(u)
     b = trigger_build(p, d.get('reason'), d.get('trigger-name'),
