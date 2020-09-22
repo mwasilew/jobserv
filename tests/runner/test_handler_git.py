@@ -121,7 +121,8 @@ class GitPollerHandlerTest(TestCase):
             self.assertIn(
                 'Authorization: Basic VGhpc0lzVGVzdEdpdEh1YlRva2Vu', content)
 
-    def test_private_gitlab(self):
+    @mock.patch('jobserv_runner.handlers.git_poller.requests')
+    def test_private_gitlab(self, requests):
         clone_url = 'https://git.com/nosuchorog/nosuchrepo'
         self.handler.rundef = {
             'script': '',

@@ -48,16 +48,24 @@ class GitPoller(SimpleHandler):
         return tok is not None
 
     def _create_gitlab_content(self, log, fd, secrets, clone_url):
-        # we can't determine by URL if its a gitlab repo, so just assume
-        # the rundef/secrets are done sanely by the user
+        # we can't determine by URL if its a gitlab repo. This secrets could
+        # be for the script-repo cloning. So we probe and hope for the best:
         env = self.rundef['env']
         user = env.get('gitlabuser') or secrets.get('gitlabuser')
         if user:
-            log.info('Adding gitlabtok to .gitconfig')
             token = self.rundef['secrets']['gitlabtok']
-            fd.write('[http "%s"]\n' % clone_url)
-            fd.write('  extraheader = Authorization: Basic ')
-            fd.write(b64(user + ':' + token) + '\n')
+            url = clone_url
+            if not url.endswith('.git'):
+                url += '.git'
+            if url[-1] != '/':
+                url += '/'
+            url += 'info/refs?service=git-upload-pack'
+            tok = b64(user + ':' + token)
+            r = requests.get(url, headers={"Authorization": "Basic " + tok})
+            if r.ok:
+                log.info('Adding gitlabtok to .gitconfig')
+                fd.write('[http "%s"]\n' % clone_url)
+                fd.write('  extraheader = Authorization: Basic %s\n' % tok)
 
     def _create_gitconfig(self, log, clone_url, gitconfig):
         # Its hard to know if the clone_url needs authentication or not. The
