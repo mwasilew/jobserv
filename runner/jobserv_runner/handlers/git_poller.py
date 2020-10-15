@@ -67,6 +67,22 @@ class GitPoller(SimpleHandler):
                 fd.write('[http "%s"]\n' % clone_url)
                 fd.write('  extraheader = Authorization: Basic %s\n' % tok)
 
+    def _create_bitbucket_content(self, log, fd, secrets, clone_url):
+        tok = secrets.get('bitbuckettok')
+        if not tok:
+            return
+        # User's often point to private github repositories. User's
+        # normally use ssh+git because that works well locally. This
+        # doesn't work for us, but hopefully we have a githubtok
+        # present. This tells git to use https which will use the token
+        fd.write('[url "https://bitbucket.org/"]\n')
+        fd.write('  insteadOf = "git@bitbucket.org:"\n')
+
+        tok = b64(secrets['bitbucketuser'] + ':' + tok)
+        log.info('Adding bitbucket credentials to .gitconfig')
+        fd.write('[http "https://bitbucket.org"]\n')
+        fd.write('  extraheader = Authorization: Basic %s\n' % tok)
+
     def _create_gitconfig(self, log, clone_url, gitconfig):
         # Its hard to know if the clone_url needs authentication or not. The
         # github, gitlab, or git.http.extraheader secrets *could* be for
@@ -82,6 +98,7 @@ class GitPoller(SimpleHandler):
         with open(gitconfig, 'w') as f:
             gh = self._create_github_content(log, f, secrets)
             self._create_gitlab_content(log, f, secrets, clone_url)
+            self._create_bitbucket_content(log, f, secrets, clone_url)
 
             # We have to be careful with the extraheader below. Its used in 2
             # different ways:
