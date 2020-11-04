@@ -224,6 +224,18 @@ class SimpleHandler(object):
         secrets = os.path.join(self.run_dir, 'secrets')
         if not os.path.exists(secrets):
             os.mkdir(secrets)  # probably a rebooted run
+
+        # Deal with docker rate-limiting:
+        try:
+            with open(os.path.expanduser('~/.docker/config.json')) as fin:
+                # copy this into container. It may have hub.docker.io read-only
+                # credentials required to avoid rate-limited pulls
+                secret = os.path.join(secrets, 'docker_host_config.json')
+                with open(secret, 'w') as fout:
+                    fout.write(fin.read())
+        except FileNotFoundError:
+            log.info('Default docker configuration detected')
+
         for secret, value in (self.rundef.get('secrets') or {}).items():
             log.info('Creating secret: %s', secret)
             with open(os.path.join(secrets, secret), 'w') as f:
