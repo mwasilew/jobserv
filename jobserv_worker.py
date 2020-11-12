@@ -23,7 +23,7 @@ import time
 import traceback
 import urllib.parse
 
-from configparser import ConfigParser
+from configparser import ConfigParser, NoOptionError
 from multiprocessing import cpu_count
 
 import requests
@@ -395,9 +395,37 @@ def _handle_reboot(rundir, jobserv, rundef, cold):
     raise RuntimeError('Failed to reboot system')
 
 
+def _update_shared_volumes_mapping(rundef):
+    """Convert rundef mappings:
+         name1: /path/in/container1
+         name2: /path/in/container2
+
+       And host config shared-volumes like:
+         name1: /path/on/host1
+         name2: /path/on/host2
+
+       to produce something we can mount with docker-run:
+         /path/on/host1: /path/in/container1
+         /path/on/host2: /path/in/container2
+    """
+    shared_vols = rundef.get('shared-volumes')
+    if shared_vols:
+        if not config.has_section('shared-volumes'):
+            raise ValueError('Host does not have shared volumes configured')
+        mapping = {}
+        for name, container_path in shared_vols.items():
+            try:
+                host_path = config.get('shared-volumes', name)
+                mapping[host_path] = container_path
+            except NoOptionError:
+                raise ValueError('Host does not have shared volume ' + name)
+        rundef['shared-volumes'] = mapping
+
+
 def _handle_run(jobserv, rundef, rundir=None):
     runsdir = os.path.join(os.path.dirname(script), 'runs')
     try:
+        _update_shared_volumes_mapping(rundef)
         jobserv.update_run(rundef, 'RUNNING', 'Setting up runner on worker')
         if not os.path.exists(runsdir):
             os.mkdir(runsdir)

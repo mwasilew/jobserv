@@ -7,6 +7,8 @@ triggers:
         container: python:3.6-alpine
         host-tag: amd64
         script: unit-test
+        shared-volumes:
+          lmp-bitbake-cache: /lmp-bitbake-cache
 
       - name: flake8
         container: python:3.6-alpine
@@ -80,6 +82,8 @@ scripts:
     apk --no-cache add git python3-dev musl-dev gcc openssl libffi-dev openssl-dev
     git config --global user.email "cibot@example.com"
     git config --global user.name "cibot"
+
+    ls /lmp-bitbake-cache/
     ./unit-test.sh
 
   build-container: |

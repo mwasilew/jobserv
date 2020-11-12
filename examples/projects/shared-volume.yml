@@ -1,0 +1,18 @@
+# An example to test a Python based project triggered by GitHub Pull Requests
+# that uses a common read-only shared volume
+timeout: 5
+triggers:
+  - name: github
+    type: github_pr
+    runs:
+      - name: unit-test
+        container: python:3.5-alpine
+        host-tag: amd64
+        script: unit-test
+        shared-volumes:
+          # The runner will mount a read-only shared volume for this run
+          venv_cache-foo.12: /var/cache-venv
+scripts:
+  unit-test: |
+    #!/bin/sh -ex
+    ls -l /var/cache-venv/

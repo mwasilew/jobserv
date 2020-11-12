@@ -209,7 +209,7 @@ class SimpleHandler(object):
                 ep = self.rundef.get('container-entrypoint')
                 log.info('Overriding container entrypointpoint to be: %s', ep)
                 cmd.extend(['--entrypoint', ep])
-            cmd.extend(['-v%s:%s' % (host, cont) for host, cont in mounts])
+            cmd.extend(['-v' + ':'.join(x) for x in mounts])
             cmd.extend(
                 [self.rundef['container'], self._container_command])
             try:
@@ -252,6 +252,10 @@ class SimpleHandler(object):
                 os.makedirs(p)
             log.info('Creating volume: %s', p)
             volumes.append((p, path))
+
+        for host, cont in (self.rundef.get('shared-volumes') or {}).items():
+            log.info('Adding shared volume: %s', cont)
+            volumes.append((host, cont, 'ro'))
 
         return volumes
 
@@ -379,7 +383,8 @@ class SimpleHandler(object):
             os.mkdir(archive)  # probably a rebooted run
         mounts.append((archive, '/archive'))
 
-        for src, dst in mounts:
+        for pair in mounts:
+            src = pair[0]
             if not os.path.exists(src):
                 raise HandlerError('Invalid mount path for container: ' + src)
         return mounts

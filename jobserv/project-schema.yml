@@ -126,6 +126,12 @@ mapping:
                     mapping:
                       regex;(^[a-zA-Z0-9_\.\-]+$):
                         type: str
+                  shared-volumes:
+                    required: False
+                    type: map
+                    mapping:
+                      regex;(^[a-zA-Z0-9_\.\-]+$):
+                        type: str
                   params:
                     required: False
                     type: map
