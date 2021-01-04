@@ -42,6 +42,7 @@ def _get_params(owner, repo, pr_num, token):
                     'GH_TARGET_REPO': data['base']['repo']['clone_url'],
                     'GIT_URL': data['head']['repo']['clone_url'],
                     'GIT_SHA_BASE': data['base']['sha'],
+                    'GIT_OLD_SHA': data['base']['sha'],
                     'GIT_SHA': data['head']['sha'],
                 }
             except Exception:
