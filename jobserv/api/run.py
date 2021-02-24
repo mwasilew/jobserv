@@ -16,7 +16,7 @@ from jobserv.models import (
     db, Build, BuildStatus, Project, Run, Test, TestResult
 )
 from jobserv.project import ProjectDefinition
-from jobserv.sendmail import notify_build_complete
+from jobserv.notify import notify_build_complete
 from jobserv.trigger import trigger_runs
 
 prefix = '/projects/<project:proj>/builds/<int:build_id>/runs'

@@ -20,7 +20,7 @@ from jobserv.git_poller import run
 from jobserv.lava_reactor import run_reaper
 from jobserv.models import (
     Build, BuildStatus, Project, ProjectTrigger, Run, TriggerTypes, Worker, db)
-from jobserv.sendmail import email_on_exception
+from jobserv.notify import email_on_exception
 from jobserv.storage import Storage
 from jobserv.worker import run_monitor_workers
 

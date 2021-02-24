@@ -9,7 +9,7 @@ import time
 import requests
 
 from jobserv.models import db, BuildStatus, Run, Worker, WORKER_DIR
-from jobserv.sendmail import (
+from jobserv.notify import (
     notify_run_terminated, notify_surge_started, notify_surge_ended)
 from jobserv.settings import SURGE_SUPPORT_RATIO, WORKER_ROTATE_PINGS_LOG
 from jobserv.stats import StatsClient

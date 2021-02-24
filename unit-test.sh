@@ -1,4 +1,4 @@
-#!/bin/sh -ex
+#!/bin/bash -ex
 
 HERE=$(dirname $(readlink -f $0))
 cd $HERE
