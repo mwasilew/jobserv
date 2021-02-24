@@ -2,10 +2,12 @@
 # Author: Andy Doan <andy.doan@linaro.org>
 
 import contextlib
+import hmac
 import json
 import os
 import shutil
 import tempfile
+from time import sleep
 
 from unittest.mock import Mock, patch
 
@@ -198,7 +200,7 @@ class RunAPITest(JobServTest):
         self._post(url, uploads, headers, 200)
 
     @patch('jobserv.api.run.Storage')
-    @patch('jobserv.api.run.notify_build_complete')
+    @patch('jobserv.api.run.notify_build_complete_email')
     def test_run_complete_triggers(self, build_complete, storage):
         m = Mock()
         m.get_project_definition.return_value = json.dumps({
@@ -514,8 +516,9 @@ class RunAPITest(JobServTest):
         self.assertEqual(BuildStatus.RUNNING, r.status)
 
     @patch('jobserv.api.run.Storage')
-    @patch('jobserv.api.run.notify_build_complete')
-    def test_build_complete_email(self, build_complete, storage):
+    @patch('jobserv.api.run.notify_build_complete_email')
+    @patch('jobserv.notify.requests')
+    def test_build_complete(self, webhook, build_complete_email, storage):
         m = Mock()
         m.get_project_definition.return_value = json.dumps({
             'timeout': 5,
@@ -528,12 +531,19 @@ class RunAPITest(JobServTest):
                     }],
                     'email': {
                         'users': 'f@f.com',
-                    }
+                    },
+                    'webhooks': [
+                        {
+                            'url': 'https://example.com',
+                            'secret_name': 'example_secret',
+                        },
+                    ],
                 },
             ],
         })
         m.console_logfd.return_value = open('/dev/null', 'w')
-        m.get_run_definition.return_value = json.dumps({})
+        m.get_run_definition.return_value = json.dumps(
+            {'secrets': {'example_secret': 'secret_value'}})
         storage.return_value = m
         r = Run(self.build, 'run0')
         r.trigger = 'github'
@@ -548,11 +558,23 @@ class RunAPITest(JobServTest):
         self._post(self.urlbase + 'run0/', None, headers, 200)
 
         db.session.refresh(r)
-        self.assertEqual(self.build, build_complete.call_args_list[0][0][0])
-        self.assertEqual('f@f.com', build_complete.call_args_list[0][0][1])
+        build_complete_email.assert_called_with(self.build, 'f@f.com')
+
+        # dumb but its notified from a thread
+        sleep(0.1)
+        webhook.post.assert_called_once()
+        call = webhook.post.call_args_list[0]
+        self.assertEqual('https://example.com', call[0][0])
+        sig = call[1]['headers']['X-JobServ-Sig']
+        data = call[1]['data']
+
+        self.assertEqual('sha256:', sig[:7])
+        computed = hmac.new(
+            b'secret_value', data.encode(), 'sha256').hexdigest()
+        self.assertTrue(hmac.compare_digest(computed, sig[7:]))
 
     @patch('jobserv.api.run.Storage')
-    @patch('jobserv.api.run.notify_build_complete')
+    @patch('jobserv.api.run.notify_build_complete_email')
     def test_build_complete_email_skip(self, build_complete, storage):
         m = Mock()
         m.get_project_definition.return_value = json.dumps({

@@ -16,7 +16,8 @@ from jobserv.models import (
     db, Build, BuildStatus, Project, Run, Test, TestResult
 )
 from jobserv.project import ProjectDefinition
-from jobserv.notify import notify_build_complete
+from jobserv.notify import (
+    notify_build_complete_email, notify_build_complete_webhook)
 from jobserv.trigger import trigger_runs
 
 prefix = '/projects/<project:proj>/builds/<int:build_id>/runs'
@@ -90,7 +91,16 @@ def _handle_build_complete(projdef, storage, build, params, secrets, trigger):
     if email:
         if build.status == BuildStatus.FAILED \
                 or not email.get('only_failures'):
-            notify_build_complete(build, email['users'])
+            notify_build_complete_email(build, email['users'])
+    webhooks = trigger.get('webhooks', projdef.project_webhooks)
+    if webhooks:
+        for webhook in webhooks:
+            if build.status == BuildStatus.FAILED \
+                    or not webhook.get('only_failures'):
+                secret = secrets.get(webhook['secret_name'], None)
+                if secret:
+                    notify_build_complete_webhook(
+                        build, webhook['url'], secret)
 
 
 def _handle_triggers(storage, run):

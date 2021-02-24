@@ -3,9 +3,13 @@
 
 import contextlib
 import functools
+import hmac
+import json
 import logging
+import requests
 import smtplib
 import time
+from threading import Thread
 import traceback
 
 from email.mime.text import MIMEText
@@ -106,7 +110,7 @@ def _send(message):
     log.error('Unable to send email:\n%s\n%r', email, last_exc)
 
 
-def notify_build_complete(build, to_list):
+def notify_build_complete_email(build, to_list):
     subject = 'jobserv: %s build #%d : %s' % (
         build.project.name, build.build_id, build.status.name)
     body = subject + '\n'
@@ -130,6 +134,45 @@ def notify_build_complete(build, to_list):
     msg['From'] = SMTP_USER
     msg['To'] = to_list
     _send(msg)
+
+
+def notify_build_complete_webhook(build, webhook_url, secret):
+    payload = {
+        'project_name': build.project.name,
+        'build_id': build.build_id,
+        'build_status': build.status.name,
+        'build_url': build_url(build),
+        'build_reason': build.reason,
+        'runs': []
+    }
+    for run in build.runs:
+        payload['runs'].append({
+            'url': run_url(run),
+            'name': run.name,
+            'status': run.status.name
+        })
+    data = json.dumps(payload)
+    sig = hmac.new(secret.encode(), msg=data.encode(), digestmod="sha256")
+    headers = {
+        'Content-type': 'application/json',
+        'X-JobServ-Sig': 'sha256:' + sig.hexdigest(),
+    }
+
+    def deliver():
+        for i in (1, 2, 4, 0):
+            try:
+                r = requests.post(webhook_url, data=data, headers=headers)
+                if r.ok:
+                    return
+                logging.error('Unable to deliver webhook to %s: HTTP_%d - %s',
+                              webhook_url, r.status_code, r.data)
+            except Exception:
+                logging.exception('Unable to deliver webhook')
+            if i:
+                logging.info('Retrying in %d seconds', i)
+                time.sleep(i)
+
+    Thread(target=deliver).start()
 
 
 def notify_run_terminated(run, cutoff):
