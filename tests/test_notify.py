@@ -13,7 +13,7 @@ from jobserv.models import (
 
 from tests import JobServTest
 
-from jobserv.notify import _get_build_stats, notify_build_complete
+from jobserv.notify import _get_build_stats, notify_build_complete_email
 
 
 class SendmailTest(JobServTest):
@@ -31,7 +31,7 @@ class SendmailTest(JobServTest):
     def test_notify_build_complete(self, smtplib):
         smtplib.SMTP().starttls.return_value = (220, b'ok')
         smtplib.SMTP().login.return_value = (235, b'ok')
-        notify_build_complete(self.build, 'f@f.com')
+        notify_build_complete_email(self.build, 'f@f.com')
         msg = smtplib.SMTP().send_message.call_args_list[0][0][0]
         self.assertEqual(
             'jobserv: job-1 build #1 : FAILED', msg['Subject'])

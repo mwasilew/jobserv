@@ -45,6 +45,10 @@ class ProjectDefinition(object):
     def project_email(self):
         return self._data.get('email', None)
 
+    @property
+    def project_webhooks(self):
+        return self._data.get('webhooks', None)
+
     def _expand_run_loops(self):
         for trigger in self.triggers:
             for run in trigger['runs']:

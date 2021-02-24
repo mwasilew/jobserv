@@ -198,7 +198,7 @@ class RunAPITest(JobServTest):
         self._post(url, uploads, headers, 200)
 
     @patch('jobserv.api.run.Storage')
-    @patch('jobserv.api.run.notify_build_complete')
+    @patch('jobserv.api.run.notify_build_complete_email')
     def test_run_complete_triggers(self, build_complete, storage):
         m = Mock()
         m.get_project_definition.return_value = json.dumps({
@@ -514,8 +514,9 @@ class RunAPITest(JobServTest):
         self.assertEqual(BuildStatus.RUNNING, r.status)
 
     @patch('jobserv.api.run.Storage')
-    @patch('jobserv.api.run.notify_build_complete')
-    def test_build_complete_email(self, build_complete, storage):
+    @patch('jobserv.api.run.notify_build_complete_email')
+    @patch('jobserv.api.run.notify_build_complete_webhook')
+    def test_build_complete(self, build_complete_webhook, build_complete_email, storage):
         m = Mock()
         m.get_project_definition.return_value = json.dumps({
             'timeout': 5,
@@ -528,12 +529,17 @@ class RunAPITest(JobServTest):
                     }],
                     'email': {
                         'users': 'f@f.com',
-                    }
+                    },
+                    'webhooks': [
+                        {'url': 'https://example.com',
+                         'secret_name': 'example_secret',
+                        }
+                    ]
                 },
             ],
         })
         m.console_logfd.return_value = open('/dev/null', 'w')
-        m.get_run_definition.return_value = json.dumps({})
+        m.get_run_definition.return_value = json.dumps({'secrets': {'example_secret': 'secret_value'},})
         storage.return_value = m
         r = Run(self.build, 'run0')
         r.trigger = 'github'
@@ -548,11 +554,13 @@ class RunAPITest(JobServTest):
         self._post(self.urlbase + 'run0/', None, headers, 200)
 
         db.session.refresh(r)
-        self.assertEqual(self.build, build_complete.call_args_list[0][0][0])
-        self.assertEqual('f@f.com', build_complete.call_args_list[0][0][1])
+        build_complete_email.assert_called_with(self.build, 'f@f.com')
+        # comment out for now
+        # should be enabled when secret is set in the ProjectTrigger
+        build_complete_webhook.assert_called_with(self.build, 'https://example.com', 'secret_value')
 
     @patch('jobserv.api.run.Storage')
-    @patch('jobserv.api.run.notify_build_complete')
+    @patch('jobserv.api.run.notify_build_complete_email')
     def test_build_complete_email_skip(self, build_complete, storage):
         m = Mock()
         m.get_project_definition.return_value = json.dumps({

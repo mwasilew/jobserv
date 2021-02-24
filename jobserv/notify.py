@@ -3,7 +3,9 @@
 
 import contextlib
 import functools
+import hashlib
 import logging
+import requests
 import smtplib
 import time
 import traceback
@@ -106,7 +108,7 @@ def _send(message):
     log.error('Unable to send email:\n%s\n%r', email, last_exc)
 
 
-def notify_build_complete(build, to_list):
+def notify_build_complete_email(build, to_list):
     subject = 'jobserv: %s build #%d : %s' % (
         build.project.name, build.build_id, build.status.name)
     body = subject + '\n'
@@ -130,6 +132,35 @@ def notify_build_complete(build, to_list):
     msg['From'] = SMTP_USER
     msg['To'] = to_list
     _send(msg)
+
+
+def notify_build_complete_webhook(build, webhook_url, secret):
+    # try to validate URL certificate before sending POST?
+    # add secret header
+    headers = {
+        'X-JSrv-Signature-256 ': hashlib.sha256(secret).hexdigest()
+    }
+    # build JSON payload
+    payload = {
+        'project_name': build.project.name,
+        'build_id': build.build_id,
+        'build_status': build.status.name,
+        'build_url': build_url(build),
+        'build_reason': build.reason,
+        'runs': []
+    }
+    for run in build.runs:
+        payload['runs'].append({
+            'url':run_url(run),
+            'name': run.name,
+            'status': run.status.name
+            })
+    try:
+        requests.post(webhook_url, data=payload, headers=headers)
+    except requests.exceptions.RequestException:
+        # what to do here?
+        pass
+
 
 
 def notify_run_terminated(run, cutoff):
