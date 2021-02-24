@@ -84,7 +84,7 @@ scripts:
     git config --global user.name "cibot"
 
     ls /lmp-bitbake-cache/
-    ./unit-test.sh
+    sh ./unit-test.sh
 
   build-container: |
     #!/bin/sh -e
